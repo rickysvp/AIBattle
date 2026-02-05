@@ -310,16 +310,16 @@ const WalletPage: React.FC = () => {
                   <QrCode className="w-20 h-20 text-white" />
                 </div>
               </div>
-              <p className="text-xs text-white/40 text-center mt-2">扫描二维码充值</p>
+              <p className="text-xs text-white/40 text-center mt-2">{t('wallet.scanQR')}</p>
             </div>
-            
+
             <div className="flex items-start gap-2 p-3 bg-luxury-gold/10 rounded-lg border border-luxury-gold/20">
               <AlertCircle className="w-4 h-4 text-luxury-gold flex-shrink-0 mt-0.5" />
               <div className="text-xs text-white/60">
-                <p className="text-luxury-gold font-medium mb-1">注意事项</p>
-                <p>• 最低充值金额: 10 $MON</p>
-                <p>• 到账时间: 网络确认后 1-3 分钟</p>
-                <p>• 请确保网络选择正确，否则资产可能丢失</p>
+                <p className="text-luxury-gold font-medium mb-1">{t('wallet.notice')}</p>
+                <p>• {t('wallet.minDeposit')}: 10 $MON</p>
+                <p>• {t('wallet.arrivalTime')}</p>
+                <p>• {t('wallet.networkWarning')}</p>
               </div>
             </div>
           </div>
@@ -350,7 +350,7 @@ const WalletPage: React.FC = () => {
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
         <div className="bg-void-panel rounded-2xl w-full max-w-md p-6 border border-white/10">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">代币兑换</h3>
+            <h3 className="text-xl font-bold text-white">{t('wallet.swap')}</h3>
             <button onClick={() => setShowSwapModal(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
               <X className="w-5 h-5 text-white/60" />
             </button>
@@ -441,7 +441,7 @@ const WalletPage: React.FC = () => {
               disabled={!fromAmount || parseFloat(fromAmount) <= 0 || isLoading['swap']}
               className="w-full py-3 rounded-xl bg-luxury-gold text-white font-bold text-lg hover:bg-luxury-gold/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-4"
             >
-              {isLoading['swap'] ? <Loader2 className="w-5 h-5 animate-spin" /> : '确认兑换'}
+              {isLoading['swap'] ? <Loader2 className="w-5 h-5 animate-spin" /> : t('wallet.confirmSwap')}
             </button>
           </div>
         </div>
@@ -474,26 +474,26 @@ const WalletPage: React.FC = () => {
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
         <div className="bg-void-panel rounded-2xl w-full max-w-md p-6 border border-white/10">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">提现</h3>
+            <h3 className="text-xl font-bold text-white">{t('wallet.withdraw')}</h3>
             <button onClick={() => setShowWithdrawModal(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
               <X className="w-5 h-5 text-white/60" />
             </button>
           </div>
-          
+
           <div className="space-y-4">
             {/* Address */}
             <div>
-              <label className="text-sm text-white/60 mb-2 block">提现地址</label>
+              <label className="text-sm text-white/60 mb-2 block">{t('wallet.withdrawAddress')}</label>
               <div className="relative">
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="输入或粘贴地址"
+                  placeholder={t('wallet.enterAddress')}
                   className="w-full bg-void border border-white/10 rounded-xl px-4 py-3 pr-16 text-white placeholder:text-white/30 focus:border-luxury-cyan focus:outline-none"
                 />
                 <button className="absolute right-3 top-1/2 -translate-y-1/2 text-xs px-2 py-1 bg-white/10 rounded text-luxury-cyan hover:bg-white/20 transition-colors">
-                  地址簿
+                  {t('wallet.addressBook')}
                 </button>
               </div>
               {/* Saved addresses */}
@@ -514,53 +514,53 @@ const WalletPage: React.FC = () => {
             
             {/* Amount */}
             <div>
-              <label className="text-sm text-white/60 mb-2 block">提现金额</label>
+              <label className="text-sm text-white/60 mb-2 block">{t('wallet.withdrawAmount')}</label>
               <div className="bg-void rounded-xl p-4 border border-white/10">
                 <div className="flex items-center justify-between mb-3">
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="0.00"
                     className="flex-1 bg-transparent text-2xl font-bold text-white placeholder:text-white/20 outline-none min-w-0"
                   />
-                  <button 
+                  <button
                     onClick={() => setAmount(wallet.balance.toString())}
                     className="text-xs px-3 py-1.5 bg-luxury-cyan/20 rounded-lg text-luxury-cyan hover:bg-luxury-cyan/30 transition-colors flex-shrink-0"
                   >
-                    全部
+                    {t('wallet.max')}
                   </button>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-white/40">≈ ${toUSDT(parseFloat(amount) || 0)} USDT</span>
-                  <span className="text-white/40">可用: {wallet.balance.toLocaleString()} MON</span>
+                  <span className="text-white/40">{t('wallet.availableBalance')}: {wallet.balance.toLocaleString()} MON</span>
                 </div>
               </div>
             </div>
-            
+
             {/* Fee info */}
             <div className="p-4 bg-void rounded-xl border border-white/5 space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-white/40">提现金额</span>
+                <span className="text-white/40">{t('wallet.withdrawAmount')}</span>
                 <span className="text-white font-medium">{amount || '0'} MON</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-white/40">网络手续费</span>
+                <span className="text-white/40">{t('wallet.networkFee')}</span>
                 <span className="text-white">{fee} MON</span>
               </div>
               <div className="h-px bg-white/10" />
               <div className="flex items-center justify-between">
-                <span className="text-white/60 text-sm">实际到账</span>
+                <span className="text-white/60 text-sm">{t('wallet.actualReceive')}</span>
                 <span className="text-luxury-green font-bold text-lg">{receiveAmount} MON</span>
               </div>
             </div>
-            
-            <button 
+
+            <button
               onClick={handleWithdraw}
               disabled={!address || !amount || parseFloat(amount) <= fee || isLoading['withdraw']}
               className="w-full py-3 rounded-xl bg-luxury-amber text-white font-bold text-lg hover:bg-luxury-amber/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
-              {isLoading['withdraw'] ? <Loader2 className="w-5 h-5 animate-spin" /> : '确认提现'}
+              {isLoading['withdraw'] ? <Loader2 className="w-5 h-5 animate-spin" /> : t('wallet.confirmWithdraw')}
             </button>
           </div>
         </div>

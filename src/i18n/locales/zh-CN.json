@@ -109,6 +109,10 @@
     "logsWillAppear": "战斗记录将在这里显示",
     "damage": "伤害"
   },
+  "platform": {
+    "agents": "Agents",
+    "tvl": "TVL"
+  },
   "tournament": {
     "title": "锦标赛",
     "subtitle": "参加锦标赛，赢取丰厚奖励",
@@ -253,7 +257,9 @@
     "help": "帮助中心",
     "about": "关于我们",
     "logout": "退出登录",
-    "inviteCode": "你的邀请码"
+    "inviteCode": "你的邀请码",
+    "enterAddress": "输入或粘贴地址",
+    "networkWarning": "请确保网络选择正确，否则资产可能丢失"
   },
   "common": {
     "confirm": "确认",

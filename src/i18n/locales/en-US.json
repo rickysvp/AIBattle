@@ -109,6 +109,10 @@
     "logsWillAppear": "Battle logs will appear here",
     "damage": "DMG"
   },
+  "platform": {
+    "agents": "Agents",
+    "tvl": "TVL"
+  },
   "tournament": {
     "title": "Tournament",
     "subtitle": "Join tournaments and win great rewards",
@@ -253,7 +257,9 @@
     "help": "Help Center",
     "about": "About Us",
     "logout": "Logout",
-    "inviteCode": "Your Invite Code"
+    "inviteCode": "Your Invite Code",
+    "enterAddress": "Enter or paste address",
+    "networkWarning": "Please ensure correct network selection"
   },
   "common": {
     "confirm": "Confirm",

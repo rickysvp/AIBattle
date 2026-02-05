@@ -45,7 +45,9 @@ const Header: React.FC = () => {
         <div className="max-w-screen-xl mx-auto px-4 h-20 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center">
-          {/* Logo占位 */}
+          <h1 className="text-3xl font-bold font-display text-white tracking-wider">
+            AI<span className="text-gradient">rena</span>
+          </h1>
         </div>
 
         {/* 钱包连接 */}
@@ -183,9 +185,8 @@ const Header: React.FC = () => {
               <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
 
               {/* 内容 */}
-              <span className="relative flex items-center gap-2 text-white font-semibold font-display tracking-wide">
-                <Wallet className="w-5 h-5" />
-                {t('header.connect')}
+              <span className="relative text-white font-semibold font-display tracking-wide">
+                Connect
               </span>
             </button>
           )}

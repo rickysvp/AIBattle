@@ -21,6 +21,37 @@ const generateTop100 = () => {
   })).sort((a, b) => b.profit - a.profit);
 };
 
+// 平台统计组件
+const PlatformStats: React.FC = () => {
+  const { t } = useTranslation();
+  const { myAgents, systemAgents } = useGameStore();
+
+  // 计算平台总数据
+  const totalMintedAgents = myAgents.length + systemAgents.length;
+  const totalTVL = [...myAgents, ...systemAgents].reduce((sum, a) => sum + a.balance, 0);
+
+  return (
+    <div className="w-full bg-void-panel/80 border border-white/5 rounded-xl overflow-hidden mb-4">
+      <div className="flex items-center">
+        {/* Agents统计 */}
+        <div className="flex-shrink-0 px-4 py-2 bg-luxury-purple/10 border-r border-white/10 flex items-center gap-2">
+          <Users className="w-4 h-4 text-luxury-purple" />
+          <span className="text-xs font-semibold text-luxury-purple">{t('platform.agents')}</span>
+          <span className="text-xs font-bold text-white font-mono">{totalMintedAgents.toLocaleString()}</span>
+        </div>
+        {/* TVL统计 */}
+        <div className="flex-shrink-0 px-4 py-2 bg-luxury-gold/10 border-r border-white/10 flex items-center gap-2">
+          <Wallet className="w-4 h-4 text-luxury-gold" />
+          <span className="text-xs font-semibold text-luxury-gold">TVL</span>
+          <span className="text-xs font-bold text-white font-mono">{totalTVL.toLocaleString()} $MON</span>
+        </div>
+        {/* 占位填充 */}
+        <div className="flex-1" />
+      </div>
+    </div>
+  );
+};
+
 // 跑马灯组件
 const LeaderboardMarquee: React.FC = () => {
   const { t } = useTranslation();
@@ -395,6 +426,8 @@ const Arena: React.FC = () => {
   return (
     <div className="min-h-screen bg-void pt-24 pb-24">
       <div className="max-w-screen-xl mx-auto px-4">
+        {/* 平台统计 - 在顶部 */}
+        <PlatformStats />
         {/* 排行榜跑马灯 - 在竞技场标题上方 */}
         <LeaderboardMarquee />
 
@@ -510,33 +543,33 @@ const Arena: React.FC = () => {
             <div className="card-luxury rounded-2xl overflow-hidden">
               {/* Tab 头部 */}
               <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
-                <div className="flex items-center gap-2 relative">
+                <div className="flex items-center gap-1 relative bg-void-light/50 rounded-xl p-1">
                   {/* 滑动背景指示器 */}
                   <motion.div
-                    className="absolute inset-y-1 rounded-lg bg-luxury-purple/20 border border-luxury-purple/30"
+                    className="absolute inset-y-1 rounded-lg bg-luxury-purple/30 border border-luxury-purple/40"
                     initial={false}
                     animate={{
-                      x: logTab === 'arena' ? 0 : 100,
-                      width: logTab === 'arena' ? 100 : 96
+                      x: logTab === 'arena' ? 4 : 104,
+                      width: 96
                     }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                   />
                   <button
                     onClick={() => setLogTab('arena')}
-                    className={`relative z-10 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                    className={`relative z-10 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       logTab === 'arena'
-                        ? 'text-luxury-purple-light'
-                        : 'text-white/60 hover:text-white'
+                        ? 'text-white'
+                        : 'text-white/50 hover:text-white/80'
                     }`}
                   >
                     BATTLE LOG
                   </button>
                   <button
                     onClick={() => setLogTab('my')}
-                    className={`relative z-10 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                    className={`relative z-10 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       logTab === 'my'
-                        ? 'text-luxury-cyan'
-                        : 'text-white/60 hover:text-white'
+                        ? 'text-white'
+                        : 'text-white/50 hover:text-white/80'
                     }`}
                   >
                     SQUAD LOG
@@ -546,22 +579,24 @@ const Arena: React.FC = () => {
               </div>
 
               {/* 日志内容 */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={logTab}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="p-4"
-                >
-                  <BattleLog
-                    logs={logTab === 'arena' ? arena.battleLogs : myBattleLogs}
-                    title=""
-                    maxHeight="280px"
-                  />
-                </motion.div>
-              </AnimatePresence>
+              <div className="relative overflow-hidden">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={logTab}
+                    initial={{ opacity: 0, x: logTab === 'arena' ? -20 : 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: logTab === 'arena' ? 20 : -20 }}
+                    transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                    className="p-4"
+                  >
+                    <BattleLog
+                      logs={logTab === 'arena' ? arena.battleLogs : myBattleLogs}
+                      title=""
+                      maxHeight="280px"
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
             </div>
           </div>
           
