@@ -7,8 +7,8 @@ import { Agent } from '../types';
 import { Swords, Users, Trophy, Zap, TrendingUp, Plus, Wallet, Sparkles, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-// 战斗阶段类型
-type BattlePhase = 'idle' | 'selecting' | 'countdown' | 'fighting' | 'settlement' | 'waiting';
+// 战斗阶段类型 - 与 store 中的 RoundPhase 保持一致
+type BattlePhase = 'waiting' | 'selecting' | 'countdown' | 'fighting' | 'settlement';
 
 // 计时器状态
 interface TimerState {
@@ -40,7 +40,7 @@ const Arena: React.FC = () => {
   
   // 使用 ref 来管理计时器状态，避免闭包问题
   const timerStateRef = useRef<TimerState>({
-    phase: 'idle',
+    phase: 'waiting',
     countdown: 0,
     round: 0,
     participants: [],
@@ -257,21 +257,20 @@ const Arena: React.FC = () => {
                     <Swords className="w-5 h-5 text-luxury-purple-light" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-white">战斗舞台</h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-semibold text-white">战斗舞台</h2>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-luxury-gold/20 text-luxury-gold border border-luxury-gold/30 font-mono">
+                        Round {currentRound}
+                      </span>
+                    </div>
                     <p className="text-xs text-white/40">实时战斗画面</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-luxury-green/10 border border-luxury-green/20">
-                    <Users className="w-4 h-4 text-luxury-green" />
-                    <span className="text-sm text-luxury-green font-mono">
-                      {systemAgents.filter(a => a.status === 'in_arena').length + myArenaAgents.length}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-luxury-cyan/10 border border-luxury-cyan/20">
-                    <TrendingUp className="w-4 h-4 text-luxury-cyan" />
-                    <span className="text-sm text-luxury-cyan font-mono">#{currentRound}</span>
-                  </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-luxury-green/10 border border-luxury-green/20">
+                  <Users className="w-4 h-4 text-luxury-green" />
+                  <span className="text-sm text-luxury-green font-mono">
+                    {systemAgents.filter(a => a.status === 'in_arena').length + myArenaAgents.length}
+                  </span>
                 </div>
               </div>
               <div className="aspect-video p-4 relative">

@@ -436,19 +436,6 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
       {/* 战斗中状态指示器 */}
       {phase === 'fighting' && (
         <>
-          {/* 存活人数 */}
-          <div className="absolute top-5 left-5 glass rounded-xl px-4 py-2 border border-luxury-rose/20 z-20">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-luxury-rose" />
-              <span className="text-sm text-white/60">存活</span>
-              <span className="text-lg font-bold text-luxury-rose font-mono">
-                {participants.filter(p => p.hp > 0).length}
-              </span>
-              <span className="text-white/30">/</span>
-              <span className="text-white/40">{participants.length}</span>
-            </div>
-          </div>
-          
           {/* 战斗倒计时 */}
           <div className="absolute top-5 right-5 glass rounded-xl px-4 py-2 border border-luxury-cyan/20 z-20">
             <div className="flex items-center gap-2">
@@ -458,19 +445,6 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
           </div>
         </>
       )}
-      
-      {/* 轮次信息 */}
-      <div className="absolute bottom-5 right-5 z-20">
-        <div className="glass rounded-xl px-4 py-3 border border-white/5">
-          <div className="flex items-center gap-3">
-            <Trophy className="w-5 h-5 text-luxury-gold" />
-            <div>
-              <p className="text-[10px] text-white/40 uppercase tracking-wider">Round</p>
-              <p className="text-2xl font-bold text-gradient font-display">{roundNumber || 1}</p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
