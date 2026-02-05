@@ -375,7 +375,7 @@ const Arena: React.FC = () => {
 
                         {/* 提示 */}
                         <p className="text-center text-white/30 text-xs mt-4">
-                          5秒后开始下一轮...
+                          3秒后开始下一轮...
                         </p>
                       </div>
                     </div>

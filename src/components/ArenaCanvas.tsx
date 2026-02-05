@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Agent, Projectile, DamageNumber, CoinTransfer, BalanceChange } from '../types';
+import { Agent, Projectile, CoinTransfer, BalanceChange } from '../types';
 import { useGameStore } from '../store/gameStore';
 import PixelAgent from './PixelAgent';
 import { Swords, Users, Timer, Trophy, Coins, TrendingDown, TrendingUp } from 'lucide-react';
@@ -18,7 +18,6 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
   selectedSlots
 }) => {
   const [projectiles, setProjectiles] = useState<Projectile[]>([]);
-  const [damageNumbers, setDamageNumbers] = useState<DamageNumber[]>([]);
   const [coinTransfers, setCoinTransfers] = useState<CoinTransfer[]>([]);
   const [balanceChanges, setBalanceChanges] = useState<BalanceChange[]>([]);
   const [explosions, setExplosions] = useState<{id: string; x: number; y: number; timestamp: number}[]>([]);
@@ -98,16 +97,6 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
             return next;
           });
         }, 300);
-
-        // 添加伤害数字
-        setDamageNumbers(prev => [...prev, {
-          id: Math.random().toString(36).substr(2, 9),
-          x: targetPos.x,
-          y: targetPos.y,
-          damage,
-          isCrit,
-          timestamp: Date.now(),
-        }]);
 
         // 计算内外侧位置（中心为 50, 50）
         const getInnerOuterPosition = (pos: {x: number, y: number}, isInner: boolean) => {
@@ -205,11 +194,10 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
     };
   }, []);
   
-  // 清理伤害数字、资金转移、余额变化和爆炸效果
+  // 清理资金转移、余额变化和爆炸效果
   useEffect(() => {
     const cleanup = setInterval(() => {
       const now = Date.now();
-      setDamageNumbers(prev => prev.filter(d => now - d.timestamp < 1000));
       setCoinTransfers(prev => prev.filter(c => now - c.timestamp < 1500));
       setBalanceChanges(prev => prev.filter(b => now - b.timestamp < 1200));
       setExplosions(prev => prev.filter(e => now - e.timestamp < 500));
@@ -232,44 +220,73 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
   const slotPositions = Array.from({ length: 10 }, (_, i) => getSlotPosition(i, 10));
 
   return (
-    <div 
+    <div
       ref={canvasRef}
       className="relative w-full h-full rounded-2xl overflow-hidden"
       style={{
         background: `
-          radial-gradient(ellipse at 50% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 60%),
-          radial-gradient(ellipse at 30% 30%, rgba(255, 215, 0, 0.05) 0%, transparent 40%),
+          radial-gradient(ellipse at 50% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+          radial-gradient(ellipse at 20% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 40%),
+          radial-gradient(ellipse at 80% 20%, rgba(255, 215, 0, 0.08) 0%, transparent 40%),
           linear-gradient(180deg, #0a0a10 0%, #050508 100%)
         `,
       }}
     >
+      {/* 虚空料子纹理背景 */}
+      <div className="absolute inset-0 opacity-30"
+        style={{
+          backgroundImage: `
+            radial-gradient(circle at 25% 25%, rgba(139, 92, 246, 0.3) 0%, transparent 50%),
+            radial-gradient(circle at 75% 75%, rgba(6, 182, 212, 0.2) 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(255, 215, 0, 0.1) 0%, transparent 60%)
+          `,
+        }}
+      />
+
+      {/* 动态粒子效果 */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-1 h-1 rounded-full bg-luxury-purple/40 animate-pulse"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 3}s`,
+              animationDuration: `${2 + Math.random() * 2}s`,
+            }}
+          />
+        ))}
+      </div>
+
       {/* 六边形网格背景 */}
-      <div className="absolute inset-0 hex-grid opacity-50" />
-      
+      <div className="absolute inset-0 hex-grid opacity-30" />
+
       {/* 竞技场背景装饰 */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        {/* 外圈 */}
-        <div className="absolute w-[90%] h-[90%] border border-luxury-purple/10 rounded-full" />
-        <div className="absolute w-[90%] h-[90%] border border-luxury-purple/5 rounded-full animate-spin-slow" style={{ animationDuration: '60s' }} />
-        
-        {/* 中圈 */}
-        <div className="absolute w-[70%] h-[70%] border border-luxury-cyan/10 rounded-full" />
-        <div className="absolute w-[70%] h-[70%] border border-luxury-cyan/5 rounded-full animate-spin-slow" style={{ animationDuration: '45s', animationDirection: 'reverse' }} />
-        
-        {/* 内圈 */}
-        <div className="absolute w-[45%] h-[45%] border border-luxury-gold/10 rounded-full" />
-        <div className="absolute w-[45%] h-[45%] border border-luxury-gold/5 rounded-full animate-spin-slow" style={{ animationDuration: '30s' }} />
-        
-        {/* 中心标志 */}
-        <div className="absolute w-24 h-24 rounded-full bg-gradient-to-br from-luxury-purple/10 to-luxury-cyan/10 border border-luxury-purple/20 flex items-center justify-center">
-          <Swords className="w-10 h-10 text-luxury-purple/30" />
+        {/* 外圈 - 发光效果 */}
+        <div className="absolute w-[92%] h-[92%] border border-luxury-purple/20 rounded-full shadow-[0_0_30px_rgba(139,92,246,0.1)]" />
+        <div className="absolute w-[92%] h-[92%] border border-luxury-purple/10 rounded-full animate-spin-slow" style={{ animationDuration: '60s' }} />
+
+        {/* 中圈 - 发光效果 */}
+        <div className="absolute w-[72%] h-[72%] border border-luxury-cyan/20 rounded-full shadow-[0_0_20px_rgba(6,182,212,0.1)]" />
+        <div className="absolute w-[72%] h-[72%] border border-luxury-cyan/10 rounded-full animate-spin-slow" style={{ animationDuration: '45s', animationDirection: 'reverse' }} />
+
+        {/* 内圈 - 发光效果 */}
+        <div className="absolute w-[48%] h-[48%] border border-luxury-gold/20 rounded-full shadow-[0_0_15px_rgba(255,215,0,0.1)]" />
+        <div className="absolute w-[48%] h-[48%] border border-luxury-gold/10 rounded-full animate-spin-slow" style={{ animationDuration: '30s' }} />
+
+        {/* 中心标志 - 虚空料子效果 */}
+        <div className="absolute w-28 h-28 rounded-full bg-gradient-to-br from-luxury-purple/20 via-luxury-cyan/10 to-luxury-gold/20 border border-luxury-purple/30 flex items-center justify-center shadow-[0_0_40px_rgba(139,92,246,0.2)]">
+          <div className="absolute inset-0 rounded-full animate-pulse bg-gradient-to-br from-luxury-purple/10 to-transparent" />
+          <Swords className="w-12 h-12 text-luxury-purple/40" />
         </div>
-        
-        {/* 装饰线条 */}
+
+        {/* 装饰线条 - 增强发光 */}
         {[0, 45, 90, 135].map(angle => (
-          <div 
+          <div
             key={angle}
-            className="absolute w-full h-px bg-gradient-to-r from-transparent via-luxury-purple/10 to-transparent"
+            className="absolute w-full h-px bg-gradient-to-r from-transparent via-luxury-purple/20 to-transparent"
             style={{ transform: `rotate(${angle}deg)` }}
           />
         ))}
@@ -433,27 +450,6 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
         );
       })}
       
-      {/* 伤害数字 */}
-      {damageNumbers.map(d => (
-        <div
-          key={d.id}
-          className="absolute damage-number font-bold pointer-events-none z-30"
-          style={{
-            left: `${d.x}%`,
-            top: `${d.y}%`,
-            color: d.isCrit ? '#f43f5e' : '#ffffff',
-            fontSize: d.isCrit ? '20px' : '16px',
-            textShadow: d.isCrit
-              ? '0 0 20px #f43f5e, 0 0 40px #f43f5e'
-              : '0 0 10px #000, 2px 2px 0 #000',
-            transform: 'translate(-50%, -50%)',
-          }}
-        >
-          {d.isCrit && <span className="text-luxury-gold text-sm block text-center">暴击!</span>}
-          <span className="font-mono">-{d.damage}</span>
-        </div>
-      ))}
-
       {/* 资金转移效果 */}
       {coinTransfers.map(c => (
         <div
