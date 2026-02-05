@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Swords, Trophy, Users, Wallet, Sparkles } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Swords, Trophy, Users, Wallet } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface TabItem {
   path: string;
   icon: React.ElementType;
-  activeIcon: React.ElementType;
+  label: string;
+  color: string;
   gradient: string;
-  glowColor: string;
-  translationKey: string;
 }
 
 const TabBar: React.FC = () => {
@@ -18,179 +17,174 @@ const TabBar: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   const tabs: TabItem[] = [
     {
       path: '/',
       icon: Swords,
-      activeIcon: Swords,
-      gradient: 'from-luxury-rose via-luxury-purple to-luxury-cyan',
-      glowColor: 'shadow-luxury-rose/50',
-      translationKey: 'nav.arena'
+      label: t('nav.arena'),
+      color: '#f43f5e',
+      gradient: 'from-rose-500 via-pink-500 to-purple-500'
     },
     {
       path: '/tournament',
       icon: Trophy,
-      activeIcon: Trophy,
-      gradient: 'from-luxury-gold via-luxury-amber to-luxury-rose',
-      glowColor: 'shadow-luxury-gold/50',
-      translationKey: 'nav.tournament'
+      label: t('nav.tournament'),
+      color: '#f59e0b',
+      gradient: 'from-amber-400 via-orange-500 to-red-500'
     },
     {
       path: '/squad',
       icon: Users,
-      activeIcon: Users,
-      gradient: 'from-luxury-cyan via-luxury-blue to-luxury-purple',
-      glowColor: 'shadow-luxury-cyan/50',
-      translationKey: 'nav.squad'
+      label: t('nav.squad'),
+      color: '#06b6d4',
+      gradient: 'from-cyan-400 via-blue-500 to-indigo-500'
     },
     {
       path: '/wallet',
       icon: Wallet,
-      activeIcon: Wallet,
-      gradient: 'from-luxury-green via-luxury-cyan to-luxury-gold',
-      glowColor: 'shadow-luxury-green/50',
-      translationKey: 'nav.wallet'
+      label: t('nav.wallet'),
+      color: '#10b981',
+      gradient: 'from-emerald-400 via-teal-500 to-cyan-500'
     }
   ];
 
   const activeIndex = tabs.findIndex(tab => tab.path === location.pathname);
 
   return (
-    <nav className="fixed bottom-6 left-0 right-0 z-50 flex justify-center pointer-events-none">
-      {/* 浮动容器 */}
-      <div className="pointer-events-auto relative">
-        {/* 外层光晕 */}
-        <div className="absolute -inset-4 bg-gradient-to-r from-luxury-purple/20 via-luxury-cyan/20 to-luxury-gold/20 rounded-full blur-2xl opacity-60" />
+    <nav className="fixed bottom-0 left-0 right-0 z-50">
+      {/* 顶部渐变遮罩 */}
+      <div className="absolute bottom-full left-0 right-0 h-20 bg-gradient-to-t from-void to-transparent pointer-events-none" />
+      
+      {/* TabBar容器 */}
+      <div className="relative bg-void-panel/95 backdrop-blur-xl border-t border-white/10">
+        {/* 顶部光线 */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         
-        {/* 主容器 */}
-        <div className="relative flex items-center gap-1 p-2 bg-void-panel/90 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl">
-          {/* 背景渐变装饰 */}
-          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-luxury-purple/5 via-luxury-cyan/5 to-luxury-gold/5" />
-          
-          {/* 顶部光线 */}
-          <div className="absolute -top-px left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+        <div className="max-w-screen-lg mx-auto px-4">
+          <div className="flex items-center justify-around py-2">
+            {tabs.map((tab, index) => {
+              const isActive = index === activeIndex;
+              const isHovered = index === hoveredIndex;
+              const Icon = tab.icon;
 
-          {tabs.map((tab, index) => {
-            const isActive = index === activeIndex;
-            const isHovered = index === hoveredIndex;
-            const Icon = isActive ? tab.activeIcon : tab.icon;
-
-            return (
-              <motion.button
-                key={tab.path}
-                onClick={() => navigate(tab.path)}
-                onMouseEnter={() => setHoveredIndex(index)}
-                onMouseLeave={() => setHoveredIndex(null)}
-                className="relative flex flex-col items-center justify-center min-w-[72px] h-14 rounded-full transition-colors"
-                whileTap={{ scale: 0.95 }}
-              >
-                {/* 激活背景 */}
-                <AnimatePresence>
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className={`absolute inset-0 bg-gradient-to-br ${tab.gradient} rounded-full`}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                    />
-                  )}
-                </AnimatePresence>
-
-                {/* 发光效果 */}
-                {isActive && (
+              return (
+                <motion.button
+                  key={tab.path}
+                  onClick={() => navigate(tab.path)}
+                  onMouseEnter={() => setHoveredIndex(index)}
+                  onMouseLeave={() => setHoveredIndex(null)}
+                  className="relative flex flex-col items-center justify-center py-2 px-4 min-w-[80px]"
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {/* 激活指示器 - 顶部光条 */}
                   <motion.div
-                    className={`absolute inset-0 bg-gradient-to-br ${tab.gradient} rounded-full blur-lg opacity-60`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 0.6 }}
-                    exit={{ opacity: 0 }}
+                    className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full"
+                    style={{ backgroundColor: tab.color }}
+                    initial={{ opacity: 0, scaleX: 0 }}
+                    animate={{ 
+                      opacity: isActive ? 1 : 0,
+                      scaleX: isActive ? 1 : 0
+                    }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   />
-                )}
 
-                {/* 悬停光晕 */}
-                {!isActive && isHovered && (
+                  {/* 激活背景光晕 */}
                   <motion.div
-                    className="absolute inset-0 bg-white/5 rounded-full"
+                    className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${tab.gradient}`}
                     initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                    animate={{ 
+                      opacity: isActive ? 0.15 : 0
+                    }}
+                    transition={{ duration: 0.3 }}
                   />
-                )}
 
-                {/* 图标容器 */}
-                <div className="relative flex items-center justify-center">
+                  {/* 悬停背景 */}
                   <motion.div
+                    className="absolute inset-0 rounded-2xl bg-white/5"
+                    initial={{ opacity: 0 }}
+                    animate={{ 
+                      opacity: !isActive && isHovered ? 1 : 0
+                    }}
+                    transition={{ duration: 0.2 }}
+                  />
+
+                  {/* 图标容器 */}
+                  <motion.div
+                    className="relative mb-1"
                     animate={{
-                      scale: isActive ? 1.1 : 1,
-                      y: isActive ? -2 : 0
+                      y: isActive ? -2 : 0,
+                      scale: isActive ? 1.1 : 1
                     }}
                     transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                   >
-                    <Icon
-                      className={`w-5 h-5 transition-all duration-300 ${
-                        isActive
-                          ? 'text-white drop-shadow-lg'
-                          : 'text-white/50 group-hover:text-white/80'
-                      }`}
-                      strokeWidth={isActive ? 2.5 : 2}
+                    {/* 图标背景 */}
+                    <motion.div
+                      className={`absolute inset-0 rounded-xl bg-gradient-to-br ${tab.gradient}`}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ 
+                        opacity: isActive ? 1 : 0,
+                        scale: isActive ? 1 : 0.8
+                      }}
+                      transition={{ duration: 0.3 }}
+                      style={{ padding: '8px' }}
                     />
+                    
+                    <div className="relative p-2">
+                      <Icon
+                        className="w-6 h-6 transition-colors duration-300"
+                        style={{ 
+                          color: isActive ? '#ffffff' : isHovered ? tab.color : 'rgba(255,255,255,0.5)'
+                        }}
+                        strokeWidth={isActive ? 2.5 : 2}
+                      />
+                    </div>
+
+                    {/* 激活发光效果 */}
+                    {isActive && (
+                      <motion.div
+                        className="absolute inset-0 rounded-xl"
+                        style={{ 
+                          background: `radial-gradient(circle, ${tab.color}40 0%, transparent 70%)`,
+                          filter: 'blur(8px)'
+                        }}
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1.5 }}
+                        transition={{ duration: 0.5 }}
+                      />
+                    )}
                   </motion.div>
 
-                  {/* 激活时的闪光效果 */}
-                  {isActive && (
+                  {/* 标签文字 */}
+                  <motion.span
+                    className="text-xs font-medium transition-colors duration-300"
+                    style={{ 
+                      color: isActive ? '#ffffff' : isHovered ? tab.color : 'rgba(255,255,255,0.5)'
+                    }}
+                    animate={{
+                      y: isActive ? 0 : 0
+                    }}
+                  >
+                    {tab.label}
+                  </motion.span>
+
+                  {/* 未读红点 */}
+                  {index === 3 && (
                     <motion.div
-                      className="absolute inset-0"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: [0, 1, 0] }}
-                      transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
-                    >
-                      <Sparkles className="w-3 h-3 text-white/80 absolute -top-1 -right-1" />
-                    </motion.div>
+                      className="absolute top-2 right-3 w-2 h-2 rounded-full"
+                      style={{ backgroundColor: tab.color }}
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    />
                   )}
-                </div>
-
-                {/* 标签文字 */}
-                <motion.span
-                  className={`mt-1 text-[10px] font-medium tracking-wide transition-all duration-300 ${
-                    isActive
-                      ? 'text-white font-semibold'
-                      : 'text-white/40'
-                  }`}
-                  animate={{
-                    opacity: isActive ? 1 : 0.6,
-                    y: isActive ? 0 : 2
-                  }}
-                >
-                  {t(tab.translationKey)}
-                </motion.span>
-
-                {/* 未读指示器（示例） */}
-                {index === 3 && (
-                  <div className="absolute top-2 right-3 w-2 h-2 bg-luxury-rose rounded-full animate-pulse" />
-                )}
-              </motion.button>
-            );
-          })}
-
-          {/* 装饰性边框 */}
-          <div className="absolute inset-0 rounded-full border border-white/5 pointer-events-none" />
-          
-          {/* 内部高光 */}
-          <div className="absolute top-1 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
+                </motion.button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* 底部反射效果 */}
-        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-8 bg-gradient-to-t from-luxury-purple/10 to-transparent blur-xl" />
+        {/* 底部安全区域（移动端） */}
+        <div className="h-safe-area-inset-bottom bg-void-panel/95" />
       </div>
     </nav>
   );
