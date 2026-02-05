@@ -4,7 +4,7 @@ import ArenaCanvas from '../components/ArenaCanvas';
 import BattleLog from '../components/BattleLog';
 import AgentCard from '../components/AgentCard';
 import { Agent } from '../types';
-import { Swords, Users, Trophy, Zap, TrendingUp, Plus, Wallet, Sparkles, X } from 'lucide-react';
+import { Swords, Users, Trophy, Zap, TrendingUp, Plus, Wallet, Sparkles, X, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // 生成今日 TOP 100 排行榜数据
@@ -25,15 +25,12 @@ const LeaderboardMarquee: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="w-full bg-void-panel/80 border border-white/5 rounded-xl overflow-hidden mb-4 group cursor-pointer hover:border-luxury-gold/30 transition-colors"
-      onClick={() => navigate('/leaderboard')}
-    >
+    <div className="w-full bg-void-panel/80 border border-white/5 rounded-xl overflow-hidden mb-4">
       <div className="flex items-center">
         {/* 标题 */}
-        <div className="flex-shrink-0 px-4 py-2 bg-luxury-gold/10 border-r border-white/10 flex items-center gap-2 group-hover:bg-luxury-gold/20 transition-colors">
+        <div className="flex-shrink-0 px-4 py-2 bg-luxury-gold/10 border-r border-white/10 flex items-center gap-2">
           <Trophy className="w-4 h-4 text-luxury-gold" />
           <span className="text-xs font-semibold text-luxury-gold">今日 TOP 100</span>
-          <span className="text-[10px] text-luxury-gold/60 ml-1">点击查看完整榜单 →</span>
         </div>
         {/* 滚动内容 */}
         <div className="flex-1 overflow-hidden relative">
@@ -48,6 +45,14 @@ const LeaderboardMarquee: React.FC = () => {
             ))}
           </div>
         </div>
+        {/* 进入榜单按钮 */}
+        <button
+          onClick={() => navigate('/leaderboard')}
+          className="flex-shrink-0 px-3 py-2 bg-luxury-gold/10 border-l border-white/10 hover:bg-luxury-gold/20 transition-colors"
+          title="查看完整榜单"
+        >
+          <ChevronRight className="w-5 h-5 text-luxury-gold" />
+        </button>
       </div>
     </div>
   );
