@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore } from '../store/gameStore';
 import ArenaCanvas from '../components/ArenaCanvas';
 import BattleLog from '../components/BattleLog';
@@ -27,6 +27,10 @@ const Arena: React.FC = () => {
   const [showSettlement, setShowSettlement] = useState(false);
   const [currentRound, setCurrentRound] = useState(1);
   
+  // 使用 ref 来跟踪最新的 round 数，避免闭包问题
+  const roundRef = useRef(1);
+  const isRunningRef = useRef(true);
+  
   // 初始化竞技场
   useEffect(() => {
     if (systemAgents.length === 0) {
@@ -34,18 +38,21 @@ const Arena: React.FC = () => {
     }
   }, [initializeArena, systemAgents.length]);
   
-  // 优化的战斗循环
+  // 战斗循环 - 使用 ref 避免闭包问题
   useEffect(() => {
     if (systemAgents.length === 0) return;
     
-    let isRunning = true;
+    isRunningRef.current = true;
     
     const runBattleLoop = async () => {
-      while (isRunning) {
+      while (isRunningRef.current) {
         // 1. 准备阶段 - 选择参赛者
         setArenaPhase('selecting');
         startNewRound();
-        setCurrentRound(prev => prev + 1);
+        
+        // 更新 round 数
+        roundRef.current += 1;
+        setCurrentRound(roundRef.current);
         
         // 随机选择10个参赛者
         const availableAgents: Agent[] = [
@@ -70,16 +77,17 @@ const Arena: React.FC = () => {
           }
         }));
         
+        // 使用 ref 获取最新的 round 数
         addBattleLog({
           type: 'round_start',
-          message: `第 ${currentRound} 轮开始！${participants.length} 名选手参战`,
+          message: `第 ${roundRef.current} 轮开始！${participants.length} 名选手参战`,
           isHighlight: true,
         });
         
         // 2. 逐个点亮坑位 (3秒内完成)
-        const slotInterval = 3000 / participants.length; // 均匀分布在3秒内
+        const slotInterval = 3000 / participants.length;
         for (let i = 0; i < participants.length; i++) {
-          if (!isRunning) return;
+          if (!isRunningRef.current) return;
           await new Promise(resolve => setTimeout(resolve, slotInterval));
           useGameStore.setState(state => ({
             arena: { ...state.arena, selectedSlots: [...state.arena.selectedSlots, i] }
@@ -89,7 +97,7 @@ const Arena: React.FC = () => {
         // 3. 倒计时阶段 (3秒)
         setArenaPhase('countdown');
         for (let i = 3; i > 0; i--) {
-          if (!isRunning) return;
+          if (!isRunningRef.current) return;
           useGameStore.setState(state => ({
             arena: { ...state.arena, countdown: i }
           }));
@@ -104,7 +112,7 @@ const Arena: React.FC = () => {
         
         // 战斗倒计时
         for (let i = 10; i > 0; i--) {
-          if (!isRunning) return;
+          if (!isRunningRef.current) return;
           useGameStore.setState(state => ({
             arena: { ...state.arena, countdown: i }
           }));
@@ -133,7 +141,7 @@ const Arena: React.FC = () => {
         
         addBattleLog({
           type: 'round_end',
-          message: `第 ${currentRound} 轮结束！冠军: ${top3[0]?.agent.name || '无'}`,
+          message: `第 ${roundRef.current} 轮结束！冠军: ${top3[0]?.agent.name || '无'}`,
           isHighlight: true,
         });
         
@@ -157,10 +165,10 @@ const Arena: React.FC = () => {
     const timer = setTimeout(runBattleLoop, 1000);
     
     return () => {
-      isRunning = false;
+      isRunningRef.current = false;
       clearTimeout(timer);
     };
-  }, [systemAgents.length]);
+  }, [systemAgents.length, myAgents.length]); // 添加依赖项
   
   // 我的在竞技场的 Agents
   const myArenaAgents = myAgents.filter(a => a.status === 'in_arena' || a.status === 'fighting');
