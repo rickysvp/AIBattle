@@ -56,17 +56,88 @@ export interface WalletState {
 }
 
 // 锦标赛类型
+export type TournamentType = 'challenge' | 'daily' | 'weekly';
+export type TournamentStatus = 'upcoming' | 'registration' | 'ongoing' | 'finished';
+export type TournamentRound = 'round128' | 'round32' | 'round8' | 'semifinal' | 'final';
+
+// 锦标赛报名记录
+export interface TournamentEntry {
+  id: string;
+  tournamentId: string;
+  userId: string;
+  agentId: string;
+  agent: Agent;
+  entryFee: number;
+  registeredAt: number;
+  eliminatedAt?: number;
+  finalRank?: number;
+  prize?: number;
+}
+
+// 锦标赛对阵
+export interface TournamentMatch {
+  id: string;
+  tournamentId: string;
+  round: TournamentRound;
+  matchIndex: number;
+  agentA?: Agent;
+  agentB?: Agent;
+  winnerId?: string;
+  startTime?: number;
+  endTime?: number;
+  bets?: PredictionBet[];
+}
+
+// 锦标赛类型
 export interface Tournament {
   id: string;
   name: string;
-  status: 'upcoming' | 'ongoing' | 'finished';
+  type: TournamentType;
+  status: TournamentStatus;
   prizePool: number;
-  participants: number;
+  participants: Agent[];
   maxParticipants: number;
   startTime: number;
   endTime?: number;
   entryFee: number;
   winners?: { agent: Agent; prize: number; rank: number }[];
+  currentRound: TournamentRound;
+  matches: TournamentMatch[];
+  qualifiedAgents: Agent[];
+  history?: TournamentHistory;
+}
+
+// 锦标赛历史记录
+export interface TournamentHistory {
+  tournamentId: string;
+  type: TournamentType;
+  name: string;
+  startTime: number;
+  endTime: number;
+  totalParticipants: number;
+  winner: Agent;
+  prizePool: number;
+  matches: TournamentMatch[];
+}
+
+// 锦标赛自动化设置
+export interface TournamentAutoSettings {
+  enabled: boolean;
+  challenge: {
+    enabled: boolean;
+    preferredAgentId?: string;
+    autoSelect: boolean;
+  };
+  daily: {
+    enabled: boolean;
+    preferredAgentId?: string;
+    autoSelect: boolean;
+  };
+  weekly: {
+    enabled: boolean;
+    preferredAgentId?: string;
+    autoSelect: boolean;
+  };
 }
 
 // 子弹/攻击特效

@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import {
   Agent, BattleLog, ArenaState, WalletState, Tournament, RoundPhase,
-  LiquidityPool, LiquidityStake, PredictionMarket, PredictionBet, AutoBetRule
+  LiquidityPool, LiquidityStake, PredictionMarket, PredictionBet, AutoBetRule,
+  TournamentType, TournamentStatus, TournamentRound, TournamentEntry, TournamentMatch,
+  TournamentAutoSettings, TournamentHistory
 } from '../types';
 import { generateRandomAgent, generateSystemAgents } from '../utils/agentGenerator';
 
@@ -34,6 +36,15 @@ interface GameStore {
 
   // 锦标赛
   tournaments: Tournament[];
+  tournamentEntries: TournamentEntry[];
+  tournamentHistory: TournamentHistory[];
+  tournamentAutoSettings: TournamentAutoSettings;
+  registerForTournament: (tournamentId: string, agentId: string) => { success: boolean; message: string };
+  setTournamentAutoSettings: (settings: Partial<TournamentAutoSettings>) => void;
+  executeAutoTournamentRegistration: () => void;
+  startTournament: (tournamentId: string) => void;
+  advanceTournamentRound: (tournamentId: string) => void;
+  getQualifiedAgentsForTournament: (tournamentId: string) => Agent[];
 
   // 铸造费用
   mintCost: number;
@@ -659,5 +670,409 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (selectedAgentId) {
       get().placePredictionBet(market.id, selectedAgentId, autoBetRule.betAmount, market.betType);
     }
+  },
+
+  // ==================== 锦标赛系统实现 ====================
+  tournamentEntries: [],
+  tournamentHistory: [],
+  tournamentAutoSettings: {
+    enabled: false,
+    challenge: { enabled: false, autoSelect: true },
+    daily: { enabled: false, autoSelect: true },
+    weekly: { enabled: false, autoSelect: true },
+  },
+
+  // 报名锦标赛
+  registerForTournament: (tournamentId: string, agentId: string) => {
+    const { wallet, tournaments, myAgents, tournamentEntries } = get();
+
+    if (!wallet.connected) {
+      return { success: false, message: 'Please connect wallet first' };
+    }
+
+    const tournament = tournaments.find((t) => t.id === tournamentId);
+    if (!tournament) {
+      return { success: false, message: 'Tournament not found' };
+    }
+
+    if (tournament.status !== 'registration' && tournament.status !== 'upcoming') {
+      return { success: false, message: 'Registration is closed' };
+    }
+
+    if (tournament.participants.length >= tournament.maxParticipants) {
+      return { success: false, message: 'Tournament is full' };
+    }
+
+    // 检查是否已经报名
+    const existingEntry = tournamentEntries.find(
+      (e) => e.tournamentId === tournamentId && e.userId === wallet.address
+    );
+    if (existingEntry) {
+      return { success: false, message: 'You have already registered for this tournament' };
+    }
+
+    const agent = myAgents.find((a) => a.id === agentId);
+    if (!agent) {
+      return { success: false, message: 'Agent not found' };
+    }
+
+    // 检查Agent是否在竞技场中
+    const { arena } = get();
+    const isInArena = arena.participants.some((p) => p.id === agentId);
+    if (isInArena) {
+      return { success: false, message: 'Agent is currently in arena. Please remove from arena first.' };
+    }
+
+    // 检查余额
+    if (agent.balance < 100) {
+      return { success: false, message: 'Agent balance must be at least 100 MON' };
+    }
+
+    // 检查报名费
+    if (wallet.balance < tournament.entryFee) {
+      return { success: false, message: `Insufficient balance for entry fee (${tournament.entryFee} MON)` };
+    }
+
+    // 检查资格赛要求
+    if (tournament.type === 'daily') {
+      // 日联赛：需要是过去24小时挑战赛冠军
+      const recentChampions = get().tournamentHistory
+        .filter((h) => h.type === 'challenge' && h.endTime > Date.now() - 24 * 60 * 60 * 1000)
+        .map((h) => h.winner.id);
+      if (!recentChampions.includes(agentId)) {
+        return { success: false, message: 'Only recent challenge champions can register for daily league' };
+      }
+    } else if (tournament.type === 'weekly') {
+      // 周联赛：需要是本周日冠军
+      const sundayChampions = get().tournamentHistory
+        .filter((h) => {
+          const date = new Date(h.endTime);
+          return h.type === 'daily' && date.getDay() === 0; // Sunday
+        })
+        .map((h) => h.winner.id);
+      if (!sundayChampions.includes(agentId)) {
+        return { success: false, message: 'Only Sunday champions can register for weekly league' };
+      }
+    }
+
+    // 扣除报名费
+    const entry: TournamentEntry = {
+      id: Math.random().toString(36).substr(2, 9),
+      tournamentId,
+      userId: wallet.address,
+      agentId,
+      agent,
+      entryFee: tournament.entryFee,
+      registeredAt: Date.now(),
+    };
+
+    set((state) => ({
+      wallet: { ...state.wallet, balance: state.wallet.balance - tournament.entryFee },
+      tournamentEntries: [...state.tournamentEntries, entry],
+      tournaments: state.tournaments.map((t) =>
+        t.id === tournamentId
+          ? { ...t, participants: [...t.participants, agent] }
+          : t
+      ),
+    }));
+
+    return { success: true, message: 'Successfully registered for tournament' };
+  },
+
+  // 设置自动报名
+  setTournamentAutoSettings: (settings: Partial<TournamentAutoSettings>) => {
+    set((state) => ({
+      tournamentAutoSettings: { ...state.tournamentAutoSettings, ...settings },
+    }));
+  },
+
+  // 执行自动报名
+  executeAutoTournamentRegistration: () => {
+    const { tournamentAutoSettings, tournaments, myAgents, wallet } = get();
+
+    if (!tournamentAutoSettings.enabled || !wallet.connected) return;
+
+    // 获取符合条件的Agent（不在竞技场且余额>100）
+    const { arena } = get();
+    const eligibleAgents = myAgents.filter(
+      (a) => !arena.participants.some((p) => p.id === a.id) && a.balance >= 100
+    );
+
+    if (eligibleAgents.length === 0) return;
+
+    // 对每种锦标赛类型进行自动报名
+    tournaments.forEach((tournament) => {
+      if (tournament.status !== 'registration' && tournament.status !== 'upcoming') return;
+      if (tournament.participants.length >= tournament.maxParticipants) return;
+
+      const typeSettings = tournamentAutoSettings[tournament.type];
+      if (!typeSettings?.enabled) return;
+
+      // 选择Agent
+      let selectedAgent: Agent | undefined;
+
+      if (typeSettings.preferredAgentId) {
+        selectedAgent = eligibleAgents.find((a) => a.id === typeSettings.preferredAgentId);
+      }
+
+      if (!selectedAgent && typeSettings.autoSelect) {
+        selectedAgent = eligibleAgents[0];
+      }
+
+      if (selectedAgent) {
+        get().registerForTournament(tournament.id, selectedAgent.id);
+      }
+    });
+  },
+
+  // 开始锦标赛
+  startTournament: (tournamentId: string) => {
+    const { tournaments } = get();
+    const tournament = tournaments.find((t) => t.id === tournamentId);
+    if (!tournament) return;
+
+    // 生成对阵表
+    const matches: TournamentMatch[] = [];
+    const participants = [...tournament.participants];
+
+    // 128进32 (第一轮，128人分成32组，每组4人，取1人)
+    for (let i = 0; i < 32; i++) {
+      const groupAgents = participants.slice(i * 4, (i + 1) * 4);
+      if (groupAgents.length >= 2) {
+        matches.push({
+          id: `match-${tournamentId}-r128-${i}`,
+          tournamentId,
+          round: 'round128',
+          matchIndex: i,
+          agentA: groupAgents[0],
+          agentB: groupAgents[1],
+        });
+      }
+    }
+
+    set((state) => ({
+      tournaments: state.tournaments.map((t) =>
+        t.id === tournamentId
+          ? { ...t, status: 'ongoing', currentRound: 'round128', matches }
+          : t
+      ),
+    }));
+  },
+
+  // 晋级下一轮
+  advanceTournamentRound: (tournamentId: string) => {
+    const { tournaments } = get();
+    const tournament = tournaments.find((t) => t.id === tournamentId);
+    if (!tournament) return;
+
+    const currentMatches = tournament.matches.filter((m) => m.round === tournament.currentRound);
+    const winners = currentMatches.map((m) => m.winnerId).filter(Boolean) as string[];
+
+    // 根据当前轮次决定下一轮
+    let nextRound: TournamentRound;
+    let matches: TournamentMatch[] = [];
+
+    switch (tournament.currentRound) {
+      case 'round128':
+        nextRound = 'round32';
+        // 32进8 (32人分成8组，每组4人)
+        for (let i = 0; i < 8; i++) {
+          const groupWinners = winners.slice(i * 4, (i + 1) * 4);
+          if (groupWinners.length >= 2) {
+            const agentA = tournament.participants.find((a) => a.id === groupWinners[0]);
+            const agentB = tournament.participants.find((a) => a.id === groupWinners[1]);
+            if (agentA && agentB) {
+              matches.push({
+                id: `match-${tournamentId}-r32-${i}`,
+                tournamentId,
+                round: 'round32',
+                matchIndex: i,
+                agentA,
+                agentB,
+              });
+            }
+          }
+        }
+        break;
+      case 'round32':
+        nextRound = 'round8';
+        // 8进4
+        for (let i = 0; i < 4; i++) {
+          const matchWinners = winners.slice(i * 2, (i + 1) * 2);
+          if (matchWinners.length >= 2) {
+            const agentA = tournament.participants.find((a) => a.id === matchWinners[0]);
+            const agentB = tournament.participants.find((a) => a.id === matchWinners[1]);
+            if (agentA && agentB) {
+              matches.push({
+                id: `match-${tournamentId}-r8-${i}`,
+                tournamentId,
+                round: 'round8',
+                matchIndex: i,
+                agentA,
+                agentB,
+              });
+            }
+          }
+        }
+        // 8进4时创建预测市场
+        get().createPredictionMarketForTournament(tournamentId, 'semifinal');
+        break;
+      case 'round8':
+        nextRound = 'semifinal';
+        // 半决赛
+        for (let i = 0; i < 2; i++) {
+          const matchWinners = winners.slice(i * 2, (i + 1) * 2);
+          if (matchWinners.length >= 2) {
+            const agentA = tournament.participants.find((a) => a.id === matchWinners[0]);
+            const agentB = tournament.participants.find((a) => a.id === matchWinners[1]);
+            if (agentA && agentB) {
+              matches.push({
+                id: `match-${tournamentId}-sf-${i}`,
+                tournamentId,
+                round: 'semifinal',
+                matchIndex: i,
+                agentA,
+                agentB,
+              });
+            }
+          }
+        }
+        // 半决赛时创建冠军预测市场
+        get().createPredictionMarketForTournament(tournamentId, 'final');
+        break;
+      case 'semifinal':
+        nextRound = 'final';
+        // 决赛
+        if (winners.length >= 2) {
+          const agentA = tournament.participants.find((a) => a.id === winners[0]);
+          const agentB = tournament.participants.find((a) => a.id === winners[1]);
+          if (agentA && agentB) {
+            matches.push({
+              id: `match-${tournamentId}-final`,
+              tournamentId,
+              round: 'final',
+              matchIndex: 0,
+              agentA,
+              agentB,
+            });
+          }
+        }
+        break;
+      case 'final':
+        // 锦标赛结束
+        const championId = winners[0];
+        const champion = tournament.participants.find((a) => a.id === championId);
+        if (champion) {
+          // 发放奖金
+          const prizePool = tournament.prizePool;
+          const championPrize = prizePool * 0.5; // 冠军50%
+          const runnerUpPrize = prizePool * 0.3; // 亚军30%
+          const thirdPlacePrize = prizePool * 0.2; // 季军20%
+
+          // 记录历史
+          const history: TournamentHistory = {
+            tournamentId,
+            type: tournament.type,
+            name: tournament.name,
+            startTime: tournament.startTime,
+            endTime: Date.now(),
+            totalParticipants: tournament.participants.length,
+            winner: champion,
+            prizePool,
+            matches: tournament.matches,
+          };
+
+          set((state) => ({
+            tournamentHistory: [...state.tournamentHistory, history],
+            tournaments: state.tournaments.map((t) =>
+              t.id === tournamentId
+                ? {
+                    ...t,
+                    status: 'finished',
+                    winners: [
+                      { agent: champion, prize: championPrize, rank: 1 },
+                      // 添加亚军和季军...
+                    ],
+                  }
+                : t
+            ),
+          }));
+        }
+        return;
+    }
+
+    set((state) => ({
+      tournaments: state.tournaments.map((t) =>
+        t.id === tournamentId
+          ? {
+              ...t,
+              currentRound: nextRound,
+              matches: [...t.matches, ...matches],
+              qualifiedAgents: tournament.participants.filter((a) => winners.includes(a.id)),
+            }
+          : t
+      ),
+    }));
+  },
+
+  // 获取有资格报名的Agent
+  getQualifiedAgentsForTournament: (tournamentId: string) => {
+    const { tournaments, myAgents, tournamentHistory, arena } = get();
+    const tournament = tournaments.find((t) => t.id === tournamentId);
+    if (!tournament) return [];
+
+    // 基础条件：不在竞技场且余额>100
+    let qualified = myAgents.filter(
+      (a) => !arena.participants.some((p) => p.id === a.id) && a.balance >= 100
+    );
+
+    // 根据类型添加额外条件
+    if (tournament.type === 'daily') {
+      const recentChampions = tournamentHistory
+        .filter((h) => h.type === 'challenge' && h.endTime > Date.now() - 24 * 60 * 60 * 1000)
+        .map((h) => h.winner.id);
+      qualified = qualified.filter((a) => recentChampions.includes(a.id));
+    } else if (tournament.type === 'weekly') {
+      const sundayChampions = tournamentHistory
+        .filter((h) => {
+          const date = new Date(h.endTime);
+          return h.type === 'daily' && date.getDay() === 0;
+        })
+        .map((h) => h.winner.id);
+      qualified = qualified.filter((a) => sundayChampions.includes(a.id));
+    }
+
+    return qualified;
+  },
+
+  // 为锦标赛创建预测市场
+  createPredictionMarketForTournament: (tournamentId: string, betType: 'semifinal' | 'final') => {
+    const { tournaments, predictionMarkets } = get();
+    const tournament = tournaments.find((t) => t.id === tournamentId);
+    if (!tournament) return;
+
+    const qualifiedAgents = tournament.qualifiedAgents;
+    if (qualifiedAgents.length === 0) return;
+
+    const market: PredictionMarket = {
+      id: `market-${tournamentId}-${betType}`,
+      tournamentId,
+      name: betType === 'semifinal' ? 'Semifinal Prediction' : 'Champion Prediction',
+      totalPool: 0,
+      odds: {},
+      status: 'open',
+      deadline: Date.now() + 3600000, // 1小时后截止
+      betType,
+      participants: qualifiedAgents.map((a) => a.id),
+    };
+
+    // 初始化赔率
+    qualifiedAgents.forEach((agent) => {
+      market.odds[agent.id] = betType === 'semifinal' ? 2.0 : 3.0;
+    });
+
+    set((state) => ({
+      predictionMarkets: [...state.predictionMarkets, market],
+    }));
   },
 }));
