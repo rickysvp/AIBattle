@@ -40,7 +40,8 @@
     "all": "全部",
     "myRooms": "我的房间",
     "public": "公开",
-    "private": "私密"
+    "private": "私密",
+    "round": "轮次"
   },
   "squad": {
     "title": "我的小队",
@@ -81,7 +82,27 @@
     "speed": "速度",
     "critical": "暴击",
     "dodge": "闪避",
-    "hit": "命中"
+    "hit": "命中",
+    "allOperations": "全部操作",
+    "selectOperations": "选择操作",
+    "distributeToAll": "平均分配给所有",
+    "to": "给",
+    "each": "每个",
+    "noIdleAgents": "没有空闲的 Agent",
+    "invalidAmount": "请输入有效的充值金额",
+    "noEligibleAgents": "没有符合条件的 Agent（需要有余额且处于空闲状态）",
+    "joinSuccess": "成功将",
+    "rechargeSuccess": "成功分配",
+    "totalBalance": "总余额",
+    "totalProfit": "总利润",
+    "avgWinRate": "平均胜率",
+    "quickMint": "快速铸造",
+    "mintCost": "铸造费用",
+    "minting": "铸造中",
+    "count": "个",
+    "noFilteredAgents": "没有符合条件的 Agent",
+    "tryOtherFilter": "尝试其他筛选条件",
+    "hidden": "未显示"
   },
   "tournament": {
     "title": "锦标赛",
@@ -90,10 +111,10 @@
     "upcoming": "即将开始",
     "ended": "已结束",
     "prizePool": "奖池",
-    "participants": "参赛者",
+    "participants": "参赛人数",
     "startTime": "开始时间",
     "endTime": "结束时间",
-    "register": "报名",
+    "register": "报名参赛",
     "registered": "已报名",
     "rules": "规则",
     "rewards": "奖励",
@@ -110,7 +131,14 @@
     "thirdPlace": "季军",
     "prize": "奖金",
     "points": "积分",
-    "medal": "勋章"
+    "medal": "勋章",
+    "viewDetails": "查看详情",
+    "viewResults": "查看结果",
+    "registrationProgress": "报名进度",
+    "noTournaments": "暂无锦标赛",
+    "stayTuned": "敬请期待更多精彩赛事",
+    "started": "已开始",
+    "entryFee": "报名费"
   },
   "leaderboard": {
     "title": "排行榜",
@@ -194,7 +222,11 @@
     "txStatus": "状态",
     "txTime": "时间",
     "txHash": "交易哈希",
-    "noTransactions": "暂无交易记录"
+    "noTransactions": "暂无交易记录",
+    "insufficientBalance": "余额不足，需要",
+    "currentBalance": "当前余额",
+    "totalAmount": "总额",
+    "recharge": "充值"
   },
   "common": {
     "confirm": "确认",

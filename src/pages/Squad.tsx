@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/gameStore';
 import AgentCard from '../components/AgentCard';
-import { 
-  Users, 
-  Plus, 
-  Filter, 
+import {
+  Users,
+  Plus,
+  Filter,
   Sparkles,
-  TrendingUp, 
+  TrendingUp,
   Skull,
-  Swords, 
+  Swords,
   Wallet,
   Zap,
   Coins,
@@ -20,10 +21,11 @@ import {
 } from 'lucide-react';
 
 const Squad: React.FC = () => {
-  const { 
-    wallet, 
-    myAgents, 
-    mintAgent, 
+  const { t } = useTranslation();
+  const {
+    wallet,
+    myAgents,
+    mintAgent,
     mintCost,
     allocateFunds,
     joinArena
@@ -81,7 +83,7 @@ const Squad: React.FC = () => {
     if (!totalAmount || totalAmount <= 0) return;
 
     if (totalAmount > wallet.balance) {
-      alert(`余额不足，需要 ${totalAmount}，当前余额 ${wallet.balance}`);
+      alert(`${t('wallet.insufficientBalance')}: ${totalAmount}, ${t('wallet.currentBalance')}: ${wallet.balance}`);
       return;
     }
 
@@ -100,7 +102,7 @@ const Squad: React.FC = () => {
 
     setBatchAmount('');
     setSelectedAgents(new Set());
-    alert(`成功分配 ${totalAmount} 给 ${selectedAgents.size} 个 Agent，每个约 ${amountPerAgent}`);
+    alert(`${t('wallet.rechargeSuccess')} ${totalAmount} ${t('squad.to')} ${selectedAgents.size} ${t('squad.agents')}, ${t('squad.each')} ~${amountPerAgent}`);
   };
   
   // 一键加入竞技场（选中）
@@ -108,40 +110,40 @@ const Squad: React.FC = () => {
     const eligibleAgents = myAgents.filter(
       a => a.status === 'idle' && a.balance > 0 && !selectedAgents.has(a.id)
     );
-    
+
     const agentsToJoin = [...eligibleAgents, ...myAgents.filter(a => selectedAgents.has(a.id))]
       .filter((v, i, a) => a.findIndex(t => t.id === v.id) === i); // 去重
-    
+
     if (agentsToJoin.length === 0) {
-      alert('没有符合条件的 Agent（需要有余额且处于空闲状态）');
+      alert(t('squad.noEligibleAgents'));
       return;
     }
-    
+
     agentsToJoin.forEach(agent => {
       if (agent.status === 'idle' && agent.balance > 0) {
         joinArena(agent.id);
       }
     });
-    
+
     setSelectedAgents(new Set());
-    alert(`成功将 ${agentsToJoin.length} 个 Agent 加入竞技场`);
+    alert(`${t('squad.joinSuccess')} ${agentsToJoin.length} ${t('squad.agents')} ${t('arena.title')}`);
   };
 
   // 一键充值所有空闲 Agents - 平均分配
   const handleRechargeAll = () => {
     if (idleAgents.length === 0) {
-      alert('没有空闲的 Agent');
+      alert(t('squad.noIdleAgents'));
       return;
     }
 
     const totalAmount = parseFloat(batchAmount);
     if (!totalAmount || totalAmount <= 0) {
-      alert('请输入有效的充值金额');
+      alert(t('squad.invalidAmount'));
       return;
     }
 
     if (totalAmount > wallet.balance) {
-      alert(`余额不足，需要 ${totalAmount}，当前余额 ${wallet.balance}`);
+      alert(`${t('wallet.insufficientBalance')}: ${totalAmount}, ${t('wallet.currentBalance')}: ${wallet.balance}`);
       return;
     }
 
@@ -158,7 +160,7 @@ const Squad: React.FC = () => {
     });
 
     setBatchAmount('');
-    alert(`成功分配 ${totalAmount} 给 ${idleAgents.length} 个 Agent，每个约 ${amountPerAgent}`);
+    alert(`${t('wallet.rechargeSuccess')} ${totalAmount} ${t('squad.to')} ${idleAgents.length} ${t('squad.agents')}, ${t('squad.each')} ~${amountPerAgent}`);
   };
 
   // 一键让所有 Agents 加入竞技场
@@ -166,17 +168,17 @@ const Squad: React.FC = () => {
     const eligibleAgents = myAgents.filter(
       a => a.status === 'idle' && a.balance > 0
     );
-    
+
     if (eligibleAgents.length === 0) {
-      alert('没有符合条件的 Agent（需要有余额且处于空闲状态）');
+      alert(t('squad.noEligibleAgents'));
       return;
     }
-    
+
     eligibleAgents.forEach(agent => {
       joinArena(agent.id);
     });
-    
-    alert(`成功将 ${eligibleAgents.length} 个 Agent 加入竞技场`);
+
+    alert(`${t('squad.joinSuccess')} ${eligibleAgents.length} ${t('squad.agents')} ${t('arena.title')}`);
   };
   
   const filteredAgents = myAgents.filter(agent => {
@@ -195,11 +197,11 @@ const Squad: React.FC = () => {
 
   const getFilterConfig = (key: string) => {
     switch (key) {
-      case 'all': return { label: '全部', color: 'bg-luxury-purple', icon: Users };
-      case 'idle': return { label: '空闲', color: 'bg-luxury-cyan', icon: Wallet };
-      case 'in_arena': return { label: '待战', color: 'bg-luxury-gold', icon: Swords };
-      case 'fighting': return { label: '战斗中', color: 'bg-luxury-rose', icon: Skull };
-      default: return { label: '全部', color: 'bg-luxury-purple', icon: Users };
+      case 'all': return { label: t('squad.all'), color: 'bg-luxury-purple', icon: Users };
+      case 'idle': return { label: t('squad.idle'), color: 'bg-luxury-cyan', icon: Wallet };
+      case 'in_arena': return { label: t('arena.waiting'), color: 'bg-luxury-gold', icon: Swords };
+      case 'fighting': return { label: t('arena.fighting'), color: 'bg-luxury-rose', icon: Skull };
+      default: return { label: t('squad.all'), color: 'bg-luxury-purple', icon: Users };
     }
   };
 
@@ -214,8 +216,8 @@ const Squad: React.FC = () => {
                 <Users className="w-6 h-6 text-luxury-cyan" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-white font-display">我的小队</h1>
-                <p className="text-white/40 text-lg">管理你的 AI Agents，铸造新的战士加入战斗</p>
+                <h1 className="text-3xl font-bold text-white font-display">{t('squad.title')}</h1>
+                <p className="text-white/40 text-lg">{t('squad.subtitle')}</p>
               </div>
             </div>
 
@@ -231,7 +233,7 @@ const Squad: React.FC = () => {
                   }`}
                 >
                   <Zap className="w-4 h-4" />
-                  <span>批量操作</span>
+                  <span>{t('squad.batchOperations')}</span>
                   {selectedAgents.size > 0 && (
                     <span className="bg-white/20 px-1.5 py-0.5 rounded-full text-xs">
                       {selectedAgents.size}
@@ -252,7 +254,7 @@ const Squad: React.FC = () => {
                             : 'text-white/60 hover:text-white'
                         }`}
                       >
-                        全部操作
+                        {t('squad.allOperations')}
                       </button>
                       <button
                         onClick={() => setSelectedAgents(new Set())}
@@ -262,7 +264,7 @@ const Squad: React.FC = () => {
                             : 'text-white/60 hover:text-white'
                         }`}
                       >
-                        选择操作
+                        {t('squad.selectOperations')}
                       </button>
                     </div>
 
@@ -276,8 +278,8 @@ const Squad: React.FC = () => {
                               <BatteryCharging className="w-3.5 h-3.5 text-white" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-white">一键充值</p>
-                              <p className="text-[10px] text-white/40">平均分配给所有 {idleAgents.length} 个 Agents</p>
+                              <p className="text-sm font-medium text-white">{t('squad.rechargeAll')}</p>
+                              <p className="text-[10px] text-white/40">{t('squad.distributeToAll')} {idleAgents.length} {t('squad.agents')}</p>
                             </div>
                           </div>
                           <div className="flex gap-2">
@@ -285,7 +287,7 @@ const Squad: React.FC = () => {
                               type="number"
                               value={batchAmount}
                               onChange={(e) => setBatchAmount(e.target.value)}
-                              placeholder="总额"
+                              placeholder={t('wallet.totalAmount')}
                               className="w-20 bg-void-panel border border-white/10 rounded-lg px-2 py-1.5 text-sm text-white placeholder:text-white/30 focus:border-luxury-green focus:outline-none"
                             />
                             <button
@@ -293,7 +295,7 @@ const Squad: React.FC = () => {
                               disabled={!batchAmount || parseFloat(batchAmount) <= 0 || idleAgents.length === 0}
                               className="flex-1 px-3 py-1.5 rounded-lg bg-luxury-green text-white text-sm font-medium hover:bg-luxury-green/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             >
-                              充值
+                              {t('wallet.recharge')}
                             </button>
                           </div>
                         </div>
@@ -305,8 +307,8 @@ const Squad: React.FC = () => {
                               <Rocket className="w-3.5 h-3.5 text-white" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-white">一键加入竞技场</p>
-                              <p className="text-[10px] text-white/40">加入所有有余额的 Agents</p>
+                              <p className="text-sm font-medium text-white">{t('squad.joinAll')}</p>
+                              <p className="text-[10px] text-white/40">{t('squad.joinAllDesc')}</p>
                             </div>
                           </div>
                           <button
@@ -314,7 +316,7 @@ const Squad: React.FC = () => {
                             disabled={canJoinArena.length === 0}
                             className="w-full py-2 rounded-lg bg-luxury-gold text-white text-sm font-medium hover:bg-luxury-gold/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                           >
-                            加入 ({canJoinArena.length})
+                            {t('arena.join')} ({canJoinArena.length})
                           </button>
                         </div>
                       </div>
@@ -332,13 +334,13 @@ const Squad: React.FC = () => {
                             ) : (
                               <Square className="w-4 h-4" />
                             )}
-                            <span className="text-xs">全选 ({selectedAgents.size}/{idleAgents.length})</span>
+                            <span className="text-xs">{t('squad.selectAll')} ({selectedAgents.size}/{idleAgents.length})</span>
                           </button>
                           <button
                             onClick={() => setSelectedAgents(new Set())}
                             className="text-[10px] text-white/40 hover:text-white/60 transition-colors"
                           >
-                            清空
+                            {t('squad.clear')}
                           </button>
                         </div>
 
@@ -348,7 +350,7 @@ const Squad: React.FC = () => {
                           disabled={selectedAgents.size === 0}
                           className="w-full py-2 rounded-lg bg-luxury-gold text-white text-sm font-medium hover:bg-luxury-gold/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                         >
-                          加入竞技场 ({selectedAgents.size})
+                          {t('squad.joinArena')} ({selectedAgents.size})
                         </button>
 
                         {/* 选中充值 */}
@@ -357,7 +359,7 @@ const Squad: React.FC = () => {
                             type="number"
                             value={batchAmount}
                             onChange={(e) => setBatchAmount(e.target.value)}
-                            placeholder="总额"
+                            placeholder={t('wallet.totalAmount')}
                             className="w-20 bg-void border border-white/10 rounded-lg px-2 py-1.5 text-sm text-white placeholder:text-white/30 focus:border-luxury-green focus:outline-none"
                           />
                           <button
@@ -365,7 +367,7 @@ const Squad: React.FC = () => {
                             disabled={!batchAmount || parseFloat(batchAmount) <= 0}
                             className="flex-1 px-3 py-1.5 rounded-lg bg-luxury-green text-white text-sm font-medium hover:bg-luxury-green/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                           >
-                            充值 ({selectedAgents.size})
+                            {t('wallet.recharge')} ({selectedAgents.size})
                           </button>
                         </div>
                       </div>
@@ -382,8 +384,8 @@ const Squad: React.FC = () => {
             <div className="w-24 h-24 rounded-3xl bg-void-light/50 border border-white/5 flex items-center justify-center mx-auto mb-6">
               <Wallet className="w-12 h-12 text-white/20" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-3">请先连接钱包</h2>
-            <p className="text-white/40">连接钱包后即可铸造和管理你的 Agents</p>
+            <h2 className="text-2xl font-bold text-white mb-3">{t('wallet.connectFirst')}</h2>
+            <p className="text-white/40">{t('wallet.connectDesc')}</p>
           </div>
         ) : (
           <>
@@ -394,17 +396,17 @@ const Squad: React.FC = () => {
                   <div className="w-10 h-10 rounded-xl bg-luxury-purple/10 border border-luxury-purple/20 flex items-center justify-center">
                     <Users className="w-5 h-5 text-luxury-purple" />
                   </div>
-                  <span className="text-xs text-white/40 uppercase tracking-wider">Agents</span>
+                  <span className="text-xs text-white/40 uppercase tracking-wider">{t('squad.agents')}</span>
                 </div>
                 <p className="text-3xl font-bold text-white font-display">{myAgents.length}</p>
               </div>
-              
+
               <div className="card-luxury rounded-2xl p-5">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-xl bg-luxury-gold/10 border border-luxury-gold/20 flex items-center justify-center">
                     <Wallet className="w-5 h-5 text-luxury-gold" />
                   </div>
-                  <span className="text-xs text-white/40 uppercase tracking-wider">总余额</span>
+                  <span className="text-xs text-white/40 uppercase tracking-wider">{t('wallet.totalBalance')}</span>
                 </div>
                 <p className="text-3xl font-bold text-luxury-gold font-mono">{totalBalance.toLocaleString()}</p>
               </div>
@@ -414,7 +416,7 @@ const Squad: React.FC = () => {
                   <div className="w-10 h-10 rounded-xl bg-luxury-green/10 border border-luxury-green/20 flex items-center justify-center">
                     <TrendingUp className="w-5 h-5 text-luxury-green" />
                   </div>
-                  <span className="text-xs text-white/40 uppercase tracking-wider">总利润</span>
+                  <span className="text-xs text-white/40 uppercase tracking-wider">{t('squad.totalProfit')}</span>
                 </div>
                 <p className={`text-3xl font-bold font-mono ${totalProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
                   {totalProfit >= 0 ? '+' : ''}{totalProfit.toLocaleString()}
@@ -426,24 +428,24 @@ const Squad: React.FC = () => {
                   <div className="w-10 h-10 rounded-xl bg-luxury-cyan/10 border border-luxury-cyan/20 flex items-center justify-center">
                     <Zap className="w-5 h-5 text-luxury-cyan" />
                   </div>
-                  <span className="text-xs text-white/40 uppercase tracking-wider">平均胜率</span>
+                  <span className="text-xs text-white/40 uppercase tracking-wider">{t('squad.avgWinRate')}</span>
                 </div>
                 <p className="text-3xl font-bold text-luxury-cyan font-mono">{avgWinRate}%</p>
               </div>
             </div>
-            
+
             {/* 快速铸造区 */}
             <div className="card-luxury rounded-2xl overflow-hidden mb-8 border-luxury-purple/20">
               <div className="px-6 py-5 border-b border-white/5 bg-gradient-to-r from-luxury-purple/10 to-transparent">
                 <div className="flex items-center gap-3">
                   <Sparkles className="w-6 h-6 text-luxury-purple" />
                   <div>
-                    <h2 className="text-lg font-semibold text-white">快速铸造</h2>
-                    <p className="text-xs text-white/40">铸造费用: <span className="text-luxury-gold">{mintCost}</span> / 个</p>
+                    <h2 className="text-lg font-semibold text-white">{t('squad.quickMint')}</h2>
+                    <p className="text-xs text-white/40">{t('squad.mintCost')}: <span className="text-luxury-gold">{mintCost}</span> / {t('squad.each')}</p>
                   </div>
                 </div>
               </div>
-              
+
               <div className="p-6">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                   <div className="flex items-center gap-4">
@@ -454,12 +456,12 @@ const Squad: React.FC = () => {
                           key={count}
                           onClick={() => setMintCount(count)}
                           className={`px-5 py-2.5 rounded-xl font-medium transition-all ${
-                            mintCount === count 
-                              ? 'bg-luxury-purple text-white shadow-lg shadow-luxury-purple/25' 
+                            mintCount === count
+                              ? 'bg-luxury-purple text-white shadow-lg shadow-luxury-purple/25'
                               : 'bg-void-light text-white/60 hover:text-white border border-white/10'
                           }`}
                         >
-                          {count}个
+                          {count}{t('squad.count')}
                         </button>
                       ))}
                     </div>
@@ -473,31 +475,31 @@ const Squad: React.FC = () => {
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-luxury-purple via-luxury-purple-light to-luxury-cyan" />
                     <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-                    
+
                     <span className="relative flex items-center gap-2 text-white font-semibold">
                       {isMinting ? (
                         <>
                           <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          铸造中...
+                          {t('squad.minting')}...
                         </>
                       ) : (
                         <>
                           <Plus className="w-5 h-5" />
-                          铸造 ({mintCost * mintCount})
+                          {t('squad.mint')} ({mintCost * mintCount})
                         </>
                       )}
                     </span>
                   </button>
                 </div>
-                
+
               </div>
             </div>
-            
+
             {/* 筛选器 */}
             <div className="flex items-center gap-3 mb-6">
               <div className="flex items-center gap-2 text-white/40">
                 <Filter className="w-4 h-4" />
-                <span className="text-sm">筛选</span>
+                <span className="text-sm">{t('arena.filter')}</span>
               </div>
               <div className="flex items-center gap-2">
                 {(['all', 'idle', 'in_arena', 'fighting'] as const).map(key => {
@@ -508,8 +510,8 @@ const Squad: React.FC = () => {
                       key={key}
                       onClick={() => setFilter(key)}
                       className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                        filter === key 
-                          ? `${config.color} text-white shadow-lg` 
+                        filter === key
+                          ? `${config.color} text-white shadow-lg`
                           : 'bg-void-light text-white/60 hover:text-white border border-white/10'
                       }`}
                     >
@@ -520,7 +522,7 @@ const Squad: React.FC = () => {
                 })}
               </div>
             </div>
-            
+
             {/* Agents 列表 */}
             {filteredAgents.length === 0 ? (
               <div className="card-luxury rounded-2xl p-16 text-center">
@@ -528,17 +530,17 @@ const Squad: React.FC = () => {
                   <Users className="w-12 h-12 text-white/20" />
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-3">
-                  {myAgents.length === 0 ? '还没有 Agent' : '没有符合条件的 Agent'}
+                  {myAgents.length === 0 ? t('squad.noAgents') : t('squad.noFilteredAgents')}
                 </h2>
                 <p className="text-white/40">
-                  {myAgents.length === 0 ? '点击上方按钮铸造你的第一个 Agent' : '尝试其他筛选条件'}
+                  {myAgents.length === 0 ? t('squad.mintFirst') : t('squad.tryOtherFilter')}
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filteredAgents.map(agent => (
-                  <div 
-                    key={agent.id} 
+                  <div
+                    key={agent.id}
                     className={`relative transition-all ${
                       selectedAgents.has(agent.id) ? 'ring-2 ring-luxury-cyan rounded-2xl' : ''
                     }`}

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/gameStore';
 import ArenaCanvas from '../components/ArenaCanvas';
 import BattleLog from '../components/BattleLog';
@@ -21,6 +22,7 @@ const generateTop100 = () => {
 
 // 跑马灯组件
 const LeaderboardMarquee: React.FC = () => {
+  const { t } = useTranslation();
   const top100 = useMemo(() => generateTop100(), []);
   const navigate = useNavigate();
 
@@ -71,6 +73,7 @@ interface TimerState {
 }
 
 const Arena: React.FC = () => {
+  const { t } = useTranslation();
   const {
     arena,
     myAgents,
@@ -85,7 +88,7 @@ const Arena: React.FC = () => {
     myBattleLogs,
     incrementSystemRound,
   } = useGameStore();
-  
+
   const navigate = useNavigate();
   const [logTab, setLogTab] = useState<'arena' | 'my'>('arena');
   const [showSettlement, setShowSettlement] = useState(false);
@@ -221,7 +224,7 @@ const Arena: React.FC = () => {
         // 记录日志
         addBattleLog({
           type: 'round_start',
-          message: `第 ${timerStateRef.current.round} 轮开始！${selectedParticipants.length} 名选手参战`,
+          message: `Round ${timerStateRef.current.round} started! ${selectedParticipants.length} participants`,
           isHighlight: true,
         });
 
@@ -295,7 +298,7 @@ const Arena: React.FC = () => {
 
         addBattleLog({
           type: 'round_end',
-          message: `第 ${timerStateRef.current.round} 轮结束！冠军: ${top3[0]?.agent.name || '无'}`,
+          message: `Round ${timerStateRef.current.round} ended! Champion: ${top3[0]?.agent.name || 'None'}`,
           isHighlight: true,
         });
 
@@ -358,7 +361,7 @@ const Arena: React.FC = () => {
   // 处理创建 Agent
   const handleCreateAgent = () => {
     if (!wallet.connected) {
-      alert('请先连接钱包');
+      alert(t('wallet.connectFirst'));
       return;
     }
     navigate('/squad');
@@ -405,9 +408,9 @@ const Arena: React.FC = () => {
                     <Swords className="w-5 h-5 text-luxury-purple-light" />
                   </div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-base font-semibold text-white">AIrena</h2>
+                    <h2 className="text-base font-semibold text-white">{t('arena.title')}</h2>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-luxury-gold/20 text-luxury-gold border border-luxury-gold/30 font-mono">
-                      Round {displaySystemRounds.toLocaleString()}
+                      {t('arena.round')} {displaySystemRounds.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -435,8 +438,8 @@ const Arena: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <Trophy className="w-5 h-5 text-luxury-gold" />
                             <div>
-                              <h3 className="text-sm font-bold text-luxury-gold font-display">本轮 TOP3</h3>
-                              <p className="text-[10px] text-white/40">第 {timerStateRef.current.round} 轮结算</p>
+                              <h3 className="text-sm font-bold text-luxury-gold font-display">{t('leaderboard.top3')}</h3>
+                              <p className="text-[10px] text-white/40">{t('arena.round')} {timerStateRef.current.round}</p>
                             </div>
                           </div>
                           <button
@@ -459,7 +462,7 @@ const Arena: React.FC = () => {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold text-white truncate">{arena.top3[0].agent.name}</p>
-                                <p className="text-[10px] text-luxury-gold">冠军</p>
+                                <p className="text-[10px] text-luxury-gold">{t('tournament.winner')}</p>
                               </div>
                               <div className="text-right">
                                 <p className="text-lg font-bold font-mono" style={{ color: '#22c55e', textShadow: '0 0 10px rgba(34, 197, 94, 0.5)' }}>+{arena.top3[0].profit} <span className="text-[10px]">$MON</span></p>
@@ -476,7 +479,7 @@ const Arena: React.FC = () => {
                                 <div className="w-6 h-6 rounded-lg bg-gray-300 text-void flex items-center justify-center text-sm font-bold">
                                   🥈
                                 </div>
-                                <span className="text-[10px] text-gray-300">亚军</span>
+                                <span className="text-[10px] text-gray-300">{t('tournament.runnerUp')}</span>
                               </div>
                               <p className="text-xs font-semibold text-white truncate">{arena.top3[1].agent.name}</p>
                               <p className="text-sm font-bold font-mono mt-0.5" style={{ color: '#22c55e', textShadow: '0 0 8px rgba(34, 197, 94, 0.4)' }}>+{arena.top3[1].profit} <span className="text-[8px]">$MON</span></p>
@@ -488,7 +491,7 @@ const Arena: React.FC = () => {
                                 <div className="w-6 h-6 rounded-lg bg-amber-600 text-white flex items-center justify-center text-sm font-bold">
                                   🥉
                                 </div>
-                                <span className="text-[10px] text-amber-600">季军</span>
+                                <span className="text-[10px] text-amber-600">{t('tournament.thirdPlace')}</span>
                               </div>
                               <p className="text-xs font-semibold text-white truncate">{arena.top3[2].agent.name}</p>
                               <p className="text-sm font-bold font-mono mt-0.5" style={{ color: '#22c55e', textShadow: '0 0 8px rgba(34, 197, 94, 0.4)' }}>+{arena.top3[2].profit} <span className="text-[8px]">$MON</span></p>
@@ -498,7 +501,7 @@ const Arena: React.FC = () => {
 
                         {/* 提示 */}
                         <p id="settlement-countdown" className="text-center text-white/30 text-xs mt-4">
-                          3秒后开始下一轮...
+                          {t('common.loading')}...
                         </p>
                       </div>
                     </div>
@@ -520,7 +523,7 @@ const Arena: React.FC = () => {
                         : 'text-white/60 hover:text-white'
                     }`}
                   >
-                    竞技场日志
+                    {t('arena.rooms')}
                   </button>
                   <button
                     onClick={() => setLogTab('my')}
@@ -530,7 +533,7 @@ const Arena: React.FC = () => {
                         : 'text-white/60 hover:text-white'
                     }`}
                   >
-                    我的日志
+                    {t('arena.history')}
                   </button>
                 </div>
 
@@ -558,7 +561,7 @@ const Arena: React.FC = () => {
                     <Zap className="w-5 h-5 text-luxury-cyan" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-white">我的小队</h2>
+                    <h2 className="text-lg font-semibold text-white">{t('squad.title')}</h2>
                   </div>
                 </div>
                 {/* 铸造按钮移到标题右侧 */}
@@ -568,7 +571,7 @@ const Arena: React.FC = () => {
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-luxury-purple/10 border border-luxury-purple/30 rounded-lg text-luxury-purple-light hover:bg-luxury-purple/20 transition-colors"
                   >
                     <Plus className="w-4 h-4" />
-                    <span className="text-xs font-medium">铸造</span>
+                    <span className="text-xs font-medium">{t('squad.mint')}</span>
                   </button>
                 )}
               </div>
@@ -576,7 +579,7 @@ const Arena: React.FC = () => {
               {/* 排序选项 */}
               {wallet.connected && myAgents.length > 0 && (
                 <div className="px-6 py-3 border-b border-white/5 flex items-center gap-2">
-                  <span className="text-xs text-white/40">排序:</span>
+                  <span className="text-xs text-white/40">{t('arena.filter')}:</span>
                   <div className="flex gap-1">
                     {(['balance', 'winRate', 'profit'] as const).map((sort) => (
                       <button
@@ -588,7 +591,7 @@ const Arena: React.FC = () => {
                             : 'text-white/40 hover:text-white/60'
                         }`}
                       >
-                        {sort === 'balance' ? '余额' : sort === 'winRate' ? '胜率' : '盈亏'}
+                        {sort === 'balance' ? t('wallet.balance') : sort === 'winRate' ? t('arena.winRate') : t('leaderboard.earnings')}
                       </button>
                     ))}
                   </div>
@@ -602,8 +605,8 @@ const Arena: React.FC = () => {
                     <div className="w-20 h-20 rounded-2xl bg-void-light/50 border border-white/5 flex items-center justify-center mx-auto mb-4">
                       <Wallet className="w-10 h-10 text-white/20" />
                     </div>
-                    <p className="text-white/40 mb-2">请先连接钱包</p>
-                    <p className="text-xs text-white/20">连接后即可管理你的 Agents</p>
+                    <p className="text-white/40 mb-2">{t('wallet.connectFirst')}</p>
+                    <p className="text-xs text-white/20">{t('wallet.connectDesc')}</p>
                   </div>
                 ) : myAgents.length === 0 ? (
                   /* 空状态 - 快捷创建入口 */
@@ -611,7 +614,7 @@ const Arena: React.FC = () => {
                     <div className="w-20 h-20 rounded-2xl bg-void-light/50 border border-white/5 flex items-center justify-center mx-auto mb-4">
                       <Users className="w-10 h-10 text-white/20" />
                     </div>
-                    <p className="text-white/40 mb-4">你还没有 Agent</p>
+                    <p className="text-white/40 mb-4">{t('squad.noAgents')}</p>
                     <button
                       onClick={handleCreateAgent}
                       className="group relative px-6 py-3 rounded-xl overflow-hidden"
@@ -620,10 +623,10 @@ const Arena: React.FC = () => {
                       <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
                       <span className="relative flex items-center gap-2 text-white font-semibold">
                         <Plus className="w-5 h-5" />
-                        创建第一个 Agent
+                        {t('squad.mintFirst')}
                       </span>
                     </button>
-                    <p className="text-xs text-white/20 mt-3">铸造费用: 100</p>
+                    <p className="text-xs text-white/20 mt-3">{t('squad.mint')} 100 $MON</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -633,7 +636,7 @@ const Arena: React.FC = () => {
                     ))}
                     {myAgents.length > 30 && (
                       <p className="text-xs text-white/30 text-center py-2">
-                        还有 {myAgents.length - 30} 个 Agent 未显示
+                        {myAgents.length - 30} {t('squad.agents')} {t('common.hidden')}
                       </p>
                     )}
                   </div>

@@ -1,32 +1,34 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/gameStore';
 import { Tournament as TournamentType } from '../types';
 import { Trophy, Clock, Users, Wallet, ChevronRight, Star, Zap } from 'lucide-react';
 
 const Tournament: React.FC = () => {
+  const { t } = useTranslation();
   const { tournaments, wallet } = useGameStore();
   
   const getStatusConfig = (status: TournamentType['status']) => {
     switch (status) {
       case 'ongoing':
-        return { 
-          label: '进行中', 
+        return {
+          label: t('tournament.ongoing'),
           color: 'text-luxury-green',
           bgColor: 'bg-luxury-green/10',
           borderColor: 'border-luxury-green/20',
           badge: 'bg-luxury-green'
         };
       case 'upcoming':
-        return { 
-          label: '即将开始', 
+        return {
+          label: t('tournament.upcoming'),
           color: 'text-luxury-cyan',
           bgColor: 'bg-luxury-cyan/10',
           borderColor: 'border-luxury-cyan/20',
           badge: 'bg-luxury-cyan'
         };
       case 'finished':
-        return { 
-          label: '已结束', 
+        return {
+          label: t('tournament.ended'),
           color: 'text-white/40',
           bgColor: 'bg-white/5',
           borderColor: 'border-white/10',
@@ -47,13 +49,13 @@ const Tournament: React.FC = () => {
   
   const getTimeRemaining = (timestamp: number) => {
     const diff = timestamp - Date.now();
-    if (diff <= 0) return '已开始';
-    
+    if (diff <= 0) return t('tournament.started');
+
     const hours = Math.floor(diff / 3600000);
     const minutes = Math.floor((diff % 3600000) / 60000);
-    
-    if (hours > 0) return `${hours}小时${minutes}分钟后`;
-    return `${minutes}分钟后`;
+
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
   };
 
   return (
@@ -66,8 +68,8 @@ const Tournament: React.FC = () => {
               <Trophy className="w-6 h-6 text-luxury-gold" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white font-display">锦标赛</h1>
-              <p className="text-white/40">参加锦标赛，赢取丰厚奖励</p>
+              <h1 className="text-3xl font-bold text-white font-display">{t('tournament.title')}</h1>
+              <p className="text-white/40">{t('tournament.subtitle')}</p>
             </div>
           </div>
         </div>
@@ -81,9 +83,9 @@ const Tournament: React.FC = () => {
             <p className="text-3xl font-bold text-luxury-green font-display mb-1">
               {tournaments.filter(t => t.status === 'ongoing').length}
             </p>
-            <p className="text-xs text-white/40 uppercase tracking-wider">进行中</p>
+            <p className="text-xs text-white/40 uppercase tracking-wider">{t('tournament.ongoing')}</p>
           </div>
-          
+
           <div className="card-luxury rounded-2xl p-5 text-center">
             <div className="w-12 h-12 rounded-xl bg-luxury-cyan/10 border border-luxury-cyan/20 flex items-center justify-center mx-auto mb-3">
               <Clock className="w-6 h-6 text-luxury-cyan" />
@@ -91,9 +93,9 @@ const Tournament: React.FC = () => {
             <p className="text-3xl font-bold text-luxury-cyan font-display mb-1">
               {tournaments.filter(t => t.status === 'upcoming').length}
             </p>
-            <p className="text-xs text-white/40 uppercase tracking-wider">即将开始</p>
+            <p className="text-xs text-white/40 uppercase tracking-wider">{t('tournament.upcoming')}</p>
           </div>
-          
+
           <div className="card-luxury rounded-2xl p-5 text-center">
             <div className="w-12 h-12 rounded-xl bg-luxury-gold/10 border border-luxury-gold/20 flex items-center justify-center mx-auto mb-3">
               <Star className="w-6 h-6 text-luxury-gold" />
@@ -101,7 +103,7 @@ const Tournament: React.FC = () => {
             <p className="text-3xl font-bold text-luxury-gold font-display mb-1">
               {tournaments.reduce((sum, t) => sum + t.prizePool, 0).toLocaleString()}
             </p>
-            <p className="text-xs text-white/40 uppercase tracking-wider">总奖池</p>
+            <p className="text-xs text-white/40 uppercase tracking-wider">{t('tournament.prizePool')}</p>
           </div>
         </div>
         
@@ -146,15 +148,15 @@ const Tournament: React.FC = () => {
                 <div className="px-6 py-5">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-5">
                     <div>
-                      <p className="text-xs text-white/40 uppercase tracking-wider mb-2">奖池</p>
+                      <p className="text-xs text-white/40 uppercase tracking-wider mb-2">{t('tournament.prizePool')}</p>
                       <div className="flex items-center gap-2">
                         <Star className="w-5 h-5 text-luxury-gold" />
                         <p className="text-2xl font-bold text-luxury-gold font-mono">{tournament.prizePool.toLocaleString()}</p>
                       </div>
                     </div>
-                    
+
                     <div>
-                      <p className="text-xs text-white/40 uppercase tracking-wider mb-2">参赛人数</p>
+                      <p className="text-xs text-white/40 uppercase tracking-wider mb-2">{t('tournament.participants')}</p>
                       <div className="flex items-center gap-2">
                         <Users className="w-5 h-5 text-luxury-purple" />
                         <p className="text-2xl font-bold text-white font-mono">
@@ -163,9 +165,9 @@ const Tournament: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    
+
                     <div>
-                      <p className="text-xs text-white/40 uppercase tracking-wider mb-2">报名费</p>
+                      <p className="text-xs text-white/40 uppercase tracking-wider mb-2">{t('tournament.entryFee')}</p>
                       <div className="flex items-center gap-2">
                         <Wallet className="w-5 h-5 text-luxury-cyan" />
                         <p className="text-2xl font-bold text-luxury-cyan font-mono">{tournament.entryFee}</p>
@@ -178,7 +180,7 @@ const Tournament: React.FC = () => {
                           disabled={!wallet.connected}
                           className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-luxury-purple to-luxury-cyan rounded-xl text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-luxury-purple/20"
                         >
-                          报名参赛
+                          {t('tournament.register')}
                           <ChevronRight className="w-4 h-4" />
                         </button>
                       )}
@@ -186,7 +188,7 @@ const Tournament: React.FC = () => {
                         <button
                           className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-luxury-green/10 border border-luxury-green/30 rounded-xl text-luxury-green font-semibold hover:bg-luxury-green/20 transition-colors"
                         >
-                          查看详情
+                          {t('tournament.viewDetails')}
                           <ChevronRight className="w-4 h-4" />
                         </button>
                       )}
@@ -194,7 +196,7 @@ const Tournament: React.FC = () => {
                         <button
                           className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-void-light border border-white/10 rounded-xl text-white/60 font-semibold hover:text-white hover:border-white/20 transition-colors"
                         >
-                          查看结果
+                          {t('tournament.viewResults')}
                           <ChevronRight className="w-4 h-4" />
                         </button>
                       )}
@@ -211,7 +213,7 @@ const Tournament: React.FC = () => {
                         />
                       </div>
                       <div className="flex justify-between mt-2">
-                        <span className="text-xs text-white/40">报名进度</span>
+                        <span className="text-xs text-white/40">{t('tournament.registrationProgress')}</span>
                         <span className="text-xs text-luxury-cyan font-mono">{progress.toFixed(0)}%</span>
                       </div>
                     </div>
@@ -228,8 +230,8 @@ const Tournament: React.FC = () => {
             <div className="w-24 h-24 rounded-3xl bg-void-light/50 border border-white/5 flex items-center justify-center mx-auto mb-6">
               <Trophy className="w-12 h-12 text-white/20" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-3">暂无锦标赛</h2>
-            <p className="text-white/40">敬请期待更多精彩赛事</p>
+            <h2 className="text-2xl font-bold text-white mb-3">{t('tournament.noTournaments')}</h2>
+            <p className="text-white/40">{t('tournament.stayTuned')}</p>
           </div>
         )}
       </div>

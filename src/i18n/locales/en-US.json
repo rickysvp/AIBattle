@@ -40,7 +40,8 @@
     "all": "All",
     "myRooms": "My Rooms",
     "public": "Public",
-    "private": "Private"
+    "private": "Private",
+    "round": "Round"
   },
   "squad": {
     "title": "My Squad",
@@ -81,7 +82,27 @@
     "speed": "Speed",
     "critical": "Critical",
     "dodge": "Dodge",
-    "hit": "Hit"
+    "hit": "Hit",
+    "allOperations": "All Operations",
+    "selectOperations": "Select Operations",
+    "distributeToAll": "Distribute to all",
+    "to": "to",
+    "each": "each",
+    "noIdleAgents": "No idle Agents",
+    "invalidAmount": "Please enter a valid amount",
+    "noEligibleAgents": "No eligible Agents (need balance and idle status)",
+    "joinSuccess": "Successfully joined",
+    "rechargeSuccess": "Successfully allocated",
+    "totalBalance": "Total Balance",
+    "totalProfit": "Total Profit",
+    "avgWinRate": "Avg Win Rate",
+    "quickMint": "Quick Mint",
+    "mintCost": "Mint Cost",
+    "minting": "Minting",
+    "count": "",
+    "noFilteredAgents": "No matching Agents",
+    "tryOtherFilter": "Try other filters",
+    "hidden": "hidden"
   },
   "tournament": {
     "title": "Tournament",
@@ -110,7 +131,14 @@
     "thirdPlace": "Third Place",
     "prize": "Prize",
     "points": "Points",
-    "medal": "Medal"
+    "medal": "Medal",
+    "viewDetails": "View Details",
+    "viewResults": "View Results",
+    "registrationProgress": "Registration Progress",
+    "noTournaments": "No tournaments yet",
+    "stayTuned": "Stay tuned for more events",
+    "started": "Started",
+    "entryFee": "Entry Fee"
   },
   "leaderboard": {
     "title": "Leaderboard",
@@ -194,7 +222,11 @@
     "txStatus": "Status",
     "txTime": "Time",
     "txHash": "Transaction Hash",
-    "noTransactions": "No transactions yet"
+    "noTransactions": "No transactions yet",
+    "insufficientBalance": "Insufficient balance, need",
+    "currentBalance": "Current balance",
+    "totalAmount": "Total Amount",
+    "recharge": "Recharge"
   },
   "common": {
     "confirm": "Confirm",
