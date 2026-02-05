@@ -27,6 +27,8 @@ export default {
           rose: '#f43f5e',
           'rose-light': '#fb7185',
           amber: '#f59e0b',
+          green: '#22c55e',
+          'green-light': '#4ade80',
         },
         
         // 霓虹光效
