@@ -790,18 +790,18 @@ const WalletPage: React.FC = () => {
               <Wallet className="w-6 h-6 text-luxury-green" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white font-display">钱包</h1>
-              <p className="text-white/40 text-lg">管理你的资产和交易记录</p>
+              <h1 className="text-3xl font-bold text-white font-display">{t('wallet.title')}</h1>
+              <p className="text-white/40 text-lg">{t('wallet.subtitle')}</p>
             </div>
           </div>
         </div>
-        
+
         {!wallet.connected ? (
           <div className="card-luxury rounded-2xl p-16 text-center">
             <div className="w-24 h-24 rounded-3xl bg-void-light/50 border border-white/5 flex items-center justify-center mx-auto mb-6">
               <Wallet className="w-12 h-12 text-white/20" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-4">请先连接钱包</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">{t('wallet.connectFirst')}</h2>
             <button
               onClick={() => connectWallet('wallet')}
               className="group relative px-8 py-4 rounded-xl overflow-hidden"
@@ -810,7 +810,7 @@ const WalletPage: React.FC = () => {
               <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
               <span className="relative flex items-center gap-2 text-white font-semibold">
                 <Wallet className="w-5 h-5" />
-                连接钱包
+                {t('wallet.connectWallet')}
               </span>
             </button>
           </div>
@@ -822,7 +822,7 @@ const WalletPage: React.FC = () => {
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <div className="flex items-center gap-3 mb-1">
-                      <p className="text-sm text-white/40 uppercase tracking-wider">总资产</p>
+                      <p className="text-sm text-white/40 uppercase tracking-wider">{t('wallet.totalAssets')}</p>
                       <div className={`flex items-center gap-1 text-xs ${MON_PRICE_CHANGE_24H >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
                         {MON_PRICE_CHANGE_24H >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                         {MON_PRICE_CHANGE_24H >= 0 ? '+' : ''}{MON_PRICE_CHANGE_24H}%
@@ -835,12 +835,12 @@ const WalletPage: React.FC = () => {
                     <p className="text-lg text-white/40 mt-1">≈ ${toUSDT(totalAssets)} USDT</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-white/40 uppercase tracking-wider mb-2">钱包地址</p>
+                    <p className="text-xs text-white/40 uppercase tracking-wider mb-2">{t('wallet.address')}</p>
                     <div className="flex items-center gap-2">
                       <code className="text-sm text-luxury-cyan font-mono bg-void-light/50 px-3 py-1.5 rounded-lg">
                         {wallet.address.slice(0, 8)}...{wallet.address.slice(-8)}
                       </code>
-                      <button 
+                      <button
                         onClick={copyAddress}
                         className="p-2 rounded-lg bg-void-light/50 text-white/40 hover:text-white hover:bg-void-light transition-colors"
                       >
@@ -849,33 +849,33 @@ const WalletPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-void-light/50 rounded-xl p-4 border border-white/5">
                     <div className="flex items-center gap-2 text-white/40 mb-2">
                       <Wallet className="w-4 h-4" />
-                      <span className="text-xs uppercase tracking-wider">可用余额</span>
+                      <span className="text-xs uppercase tracking-wider">{t('wallet.available')}</span>
                     </div>
                     <p className="text-2xl font-bold text-luxury-green font-mono">{wallet.balance.toLocaleString()}</p>
                     <p className="text-xs text-white/40 mt-1">≈ ${toUSDT(wallet.balance)} USDT</p>
                   </div>
-                  
+
                   <div className="bg-void-light/50 rounded-xl p-4 border border-white/5">
                     <div className="flex items-center gap-2 text-white/40 mb-2">
                       <TrendingUp className="w-4 h-4" />
-                      <span className="text-xs uppercase tracking-wider">锁定资产</span>
+                      <span className="text-xs uppercase tracking-wider">{t('wallet.locked')}</span>
                     </div>
                     <p className="text-2xl font-bold text-luxury-amber font-mono">{agentsTotalBalance.toLocaleString()}</p>
                     <p className="text-xs text-white/40 mt-1">≈ ${toUSDT(agentsTotalBalance)} USDT</p>
                   </div>
-                  
+
                   <div className="bg-void-light/50 rounded-xl p-4 border border-white/5">
                     <div className="flex items-center gap-2 text-white/40 mb-2">
                       <PieChart className="w-4 h-4" />
-                      <span className="text-xs uppercase tracking-wider">Agents</span>
+                      <span className="text-xs uppercase tracking-wider">{t('wallet.agents')}</span>
                     </div>
                     <p className="text-2xl font-bold text-luxury-purple font-mono">{myAgents.length}</p>
-                    <p className="text-xs text-white/40 mt-1">总估值 {toUSDT(agentsTotalBalance)} USDT</p>
+                    <p className="text-xs text-white/40 mt-1">{t('wallet.totalValue')} {toUSDT(agentsTotalBalance)} USDT</p>
                   </div>
                 </div>
               </div>
@@ -883,37 +883,37 @@ const WalletPage: React.FC = () => {
             
             {/* 操作按钮 */}
             <div className="grid grid-cols-3 gap-4 mb-6">
-              <button 
+              <button
                 onClick={() => setShowDepositModal(true)}
                 className="group p-6 card-luxury rounded-2xl text-left transition-all hover:border-luxury-green/30"
               >
                 <div className="w-14 h-14 rounded-2xl bg-luxury-green/10 border border-luxury-green/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <ArrowDownRight className="w-7 h-7 text-luxury-green" />
                 </div>
-                <p className="text-lg font-semibold text-white mb-1">充值</p>
-                <p className="text-sm text-white/40">从外部钱包转入</p>
+                <p className="text-lg font-semibold text-white mb-1">{t('wallet.deposit')}</p>
+                <p className="text-sm text-white/40">{t('wallet.depositDesc')}</p>
               </button>
-              
-              <button 
+
+              <button
                 onClick={() => setShowSwapModal(true)}
                 className="group p-6 card-luxury rounded-2xl text-left transition-all hover:border-luxury-gold/30"
               >
                 <div className="w-14 h-14 rounded-2xl bg-luxury-gold/10 border border-luxury-gold/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <RefreshCw className="w-7 h-7 text-luxury-gold" />
                 </div>
-                <p className="text-lg font-semibold text-white mb-1">SWAP</p>
-                <p className="text-sm text-white/40">代币兑换</p>
+                <p className="text-lg font-semibold text-white mb-1">{t('wallet.swap')}</p>
+                <p className="text-sm text-white/40">{t('wallet.swapDesc')}</p>
               </button>
 
-              <button 
+              <button
                 onClick={() => setShowWithdrawModal(true)}
                 className="group p-6 card-luxury rounded-2xl text-left transition-all hover:border-luxury-amber/30"
               >
                 <div className="w-14 h-14 rounded-2xl bg-luxury-amber/10 border border-luxury-amber/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <ArrowUpRight className="w-7 h-7 text-luxury-amber" />
                 </div>
-                <p className="text-lg font-semibold text-white mb-1">提现</p>
-                <p className="text-sm text-white/40">转出到外部钱包</p>
+                <p className="text-lg font-semibold text-white mb-1">{t('wallet.withdraw')}</p>
+                <p className="text-sm text-white/40">{t('wallet.withdrawDesc')}</p>
               </button>
             </div>
 

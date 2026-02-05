@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { useTranslation } from 'react-i18next';
-import { Wallet, LogOut, Zap, Sparkles, Globe, ChevronDown } from 'lucide-react';
+import { Wallet, LogOut, Zap, Sparkles, Globe, ChevronDown, Users } from 'lucide-react';
 import ConnectWalletModal from './ConnectWalletModal';
 import { languages } from '../i18n';
 
 const Header: React.FC = () => {
-  const { wallet, connectWallet, disconnectWallet } = useGameStore();
+  const { wallet, connectWallet, disconnectWallet, myAgents, systemAgents } = useGameStore();
   const { t, i18n } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -44,10 +44,23 @@ const Header: React.FC = () => {
     >
         <div className="max-w-screen-xl mx-auto px-4 h-20 flex items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center">
+        <div className="flex items-center gap-6">
           <h1 className="text-3xl font-bold font-display text-white tracking-wider">
             AI<span className="text-gradient">rena</span>
           </h1>
+          {/* 平台统计 */}
+          <div className="hidden md:flex items-center gap-4">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-luxury-purple/10 border border-luxury-purple/20">
+              <Users className="w-4 h-4 text-luxury-purple" />
+              <span className="text-xs text-white/60">{t('platform.agents')}</span>
+              <span className="text-sm font-bold text-white font-mono">{(myAgents.length + systemAgents.length).toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-luxury-gold/10 border border-luxury-gold/20">
+              <Wallet className="w-4 h-4 text-luxury-gold" />
+              <span className="text-xs text-white/60">TVL</span>
+              <span className="text-sm font-bold text-white font-mono">{[...myAgents, ...systemAgents].reduce((sum, a) => sum + a.balance, 0).toLocaleString()} $MON</span>
+            </div>
+          </div>
         </div>
 
         {/* 钱包连接 */}
@@ -56,11 +69,9 @@ const Header: React.FC = () => {
           <div className="relative">
             <button
               onClick={() => setShowLangMenu(!showLangMenu)}
-              className="flex items-center gap-2 glass rounded-xl px-3 py-2 border border-white/10 hover:border-white/20 transition-colors"
+              className="flex items-center justify-center glass rounded-xl w-10 h-10 border border-white/10 hover:border-white/20 transition-colors"
             >
-              <Globe className="w-4 h-4 text-white/60" />
-              <span className="text-sm text-white">{currentLang.flag}</span>
-              <ChevronDown className={`w-3 h-3 text-white/40 transition-transform ${showLangMenu ? 'rotate-180' : ''}`} />
+              <Globe className="w-5 h-5 text-white/60" />
             </button>
 
             {/* 语言下拉菜单 */}
