@@ -209,126 +209,152 @@ const Squad: React.FC = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowBatchPanel(!showBatchPanel)}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
                     showBatchPanel
-                      ? 'bg-luxury-cyan border-luxury-cyan text-white shadow-lg shadow-luxury-cyan/30'
-                      : 'bg-void-panel border-white/20 text-white hover:border-luxury-cyan/50 hover:text-luxury-cyan'
+                      ? 'bg-luxury-cyan text-white shadow-lg shadow-luxury-cyan/25'
+                      : 'bg-void-panel border border-white/10 text-white/70 hover:text-white hover:border-luxury-cyan/50'
                   }`}
                 >
                   <Zap className="w-4 h-4" />
-                  <span className="text-sm font-bold">批量操作</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${showBatchPanel ? 'bg-white/20' : 'bg-white/10'}`}>
-                    {showBatchPanel ? '收起' : '展开'}
-                  </span>
+                  <span>批量操作</span>
+                  {selectedAgents.size > 0 && (
+                    <span className="bg-white/20 px-1.5 py-0.5 rounded-full text-xs">
+                      {selectedAgents.size}
+                    </span>
+                  )}
                 </button>
 
                 {/* 批量操作下拉面板 */}
                 {showBatchPanel && (
-                  <div className="absolute top-full right-0 mt-2 w-72 bg-void-panel rounded-xl border-2 border-luxury-cyan/40 p-4 z-50 shadow-2xl shadow-black/50">
-                    {/* 标题 */}
-                    <div className="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
-                      <Zap className="w-4 h-4 text-luxury-cyan" />
-                      <span className="text-sm font-bold text-white">批量操作</span>
-                    </div>
-
-                    {/* 一键充值所有 */}
-                    <div className="mb-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-6 h-6 rounded-lg bg-luxury-green flex items-center justify-center">
-                          <BatteryCharging className="w-3.5 h-3.5 text-white" />
-                        </div>
-                        <span className="text-xs font-medium text-white/80">一键充值所有</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          value={batchAmount}
-                          onChange={(e) => setBatchAmount(e.target.value)}
-                          placeholder="输入金额"
-                          className="flex-1 bg-void border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-luxury-green focus:outline-none"
-                        />
-                        <button
-                          onClick={handleRechargeAll}
-                          disabled={!batchAmount || parseFloat(batchAmount) <= 0 || idleAgents.length === 0}
-                          className="px-4 py-2 rounded-lg bg-luxury-green text-white font-medium hover:bg-luxury-green/90 disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed transition-colors text-xs whitespace-nowrap"
-                        >
-                          充值 ({idleAgents.length})
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* 一键加入竞技场 */}
-                    <div className="mb-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-6 h-6 rounded-lg bg-luxury-gold flex items-center justify-center">
-                          <Rocket className="w-3.5 h-3.5 text-white" />
-                        </div>
-                        <span className="text-xs font-medium text-white/80">一键加入竞技场</span>
-                      </div>
+                  <div className="absolute top-full right-0 mt-2 w-80 bg-void-panel rounded-xl border border-white/10 p-4 z-50 shadow-2xl">
+                    {/* 操作模式切换 */}
+                    <div className="flex gap-2 mb-4 p-1 bg-void rounded-lg">
                       <button
-                        onClick={handleJoinAllArena}
-                        disabled={canJoinArena.length === 0}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-luxury-gold text-white font-medium hover:bg-luxury-gold/90 disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed transition-colors text-xs"
+                        onClick={() => setSelectedAgents(new Set())}
+                        className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+                          selectedAgents.size === 0
+                            ? 'bg-luxury-cyan text-white'
+                            : 'text-white/60 hover:text-white'
+                        }`}
                       >
-                        <LogIn className="w-3.5 h-3.5" />
-                        全部加入 ({canJoinArena.length})
+                        全部操作
+                      </button>
+                      <button
+                        onClick={() => setSelectedAgents(new Set())}
+                        className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+                          selectedAgents.size > 0
+                            ? 'bg-luxury-cyan text-white'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        选择操作
                       </button>
                     </div>
 
-                    {/* 分隔线 */}
-                    <div className="h-px bg-white/20 my-4" />
+                    {selectedAgents.size === 0 ? (
+                      /* 全部操作模式 */
+                      <div className="space-y-3">
+                        {/* 一键充值 */}
+                        <div className="p-3 bg-void rounded-lg border border-white/5">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-8 h-8 rounded-lg bg-luxury-green flex items-center justify-center">
+                              <BatteryCharging className="w-4 h-4 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-white">一键充值</p>
+                              <p className="text-xs text-white/40">为所有空闲 Agents 充值</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <input
+                              type="number"
+                              value={batchAmount}
+                              onChange={(e) => setBatchAmount(e.target.value)}
+                              placeholder="输入金额"
+                              className="flex-1 bg-void-panel border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-luxury-green focus:outline-none"
+                            />
+                            <button
+                              onClick={handleRechargeAll}
+                              disabled={!batchAmount || parseFloat(batchAmount) <= 0 || idleAgents.length === 0}
+                              className="px-4 py-2 rounded-lg bg-luxury-green text-white text-sm font-medium hover:bg-luxury-green/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                            >
+                              充值 ({idleAgents.length})
+                            </button>
+                          </div>
+                        </div>
 
-                    {/* 选择操作区域 */}
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <button
-                          onClick={toggleSelectAll}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-void border border-white/20 text-white/70 hover:text-white hover:border-white/40 transition-colors text-xs"
-                        >
-                          {selectedAgents.size === idleAgents.length && idleAgents.length > 0 ? (
-                            <CheckSquare className="w-4 h-4 text-luxury-cyan" />
-                          ) : (
-                            <Square className="w-4 h-4" />
-                          )}
-                          <span className="font-medium">全选 ({selectedAgents.size}/{idleAgents.length})</span>
-                        </button>
-                        
+                        {/* 一键加入 */}
+                        <div className="p-3 bg-void rounded-lg border border-white/5">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-8 h-8 rounded-lg bg-luxury-gold flex items-center justify-center">
+                              <Rocket className="w-4 h-4 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-white">一键加入竞技场</p>
+                              <p className="text-xs text-white/40">将所有符合条件的 Agents 加入</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={handleJoinAllArena}
+                            disabled={canJoinArena.length === 0}
+                            className="w-full py-2.5 rounded-lg bg-luxury-gold text-white text-sm font-medium hover:bg-luxury-gold/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          >
+                            全部加入 ({canJoinArena.length})
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* 选择操作模式 */
+                      <div className="space-y-3">
+                        {/* 选择控制栏 */}
+                        <div className="flex items-center justify-between p-3 bg-void rounded-lg border border-white/5">
+                          <button
+                            onClick={toggleSelectAll}
+                            className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
+                          >
+                            {selectedAgents.size === idleAgents.length && idleAgents.length > 0 ? (
+                              <CheckSquare className="w-4 h-4 text-luxury-cyan" />
+                            ) : (
+                              <Square className="w-4 h-4" />
+                            )}
+                            <span>全选 ({selectedAgents.size}/{idleAgents.length})</span>
+                          </button>
+                          <button
+                            onClick={() => setSelectedAgents(new Set())}
+                            className="text-xs text-white/40 hover:text-white/60 transition-colors"
+                          >
+                            清空
+                          </button>
+                        </div>
+
+                        {/* 选中加入 */}
                         <button
                           onClick={handleBatchJoinArena}
                           disabled={selectedAgents.size === 0}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-luxury-cyan text-white font-medium hover:bg-luxury-cyan/90 disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed transition-colors text-xs"
+                          className="w-full py-2.5 rounded-lg bg-luxury-gold text-white text-sm font-medium hover:bg-luxury-gold/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                         >
-                          <LogIn className="w-3.5 h-3.5" />
-                          <span>加入</span>
-                          <span className="bg-white/20 px-1.5 py-0.5 rounded-full text-[10px] font-bold">
-                            {selectedAgents.size}
-                          </span>
+                          加入竞技场 ({selectedAgents.size})
                         </button>
-                      </div>
-                      
-                      {/* 批量充值（选中） */}
-                      {selectedAgents.size > 0 && (
-                        <div className="flex items-center gap-2 p-3 bg-void rounded-lg border border-white/10">
-                          <div className="w-6 h-6 rounded bg-luxury-cyan/20 flex items-center justify-center">
-                            <Coins className="w-3 h-3 text-luxury-cyan" />
-                          </div>
+
+                        {/* 选中充值 */}
+                        <div className="flex gap-2">
                           <input
                             type="number"
                             value={batchAmount}
                             onChange={(e) => setBatchAmount(e.target.value)}
                             placeholder="金额"
-                            className="flex-1 bg-void-panel border border-white/20 rounded px-3 py-1.5 text-sm text-white placeholder:text-white/40 focus:border-luxury-cyan focus:outline-none"
+                            className="flex-1 bg-void border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-luxury-green focus:outline-none"
                           />
                           <button
                             onClick={handleBatchRecharge}
                             disabled={!batchAmount || parseFloat(batchAmount) <= 0}
-                            className="px-3 py-1.5 rounded bg-luxury-cyan text-white font-medium hover:bg-luxury-cyan/90 disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed transition-colors text-xs"
+                            className="px-4 py-2 rounded-lg bg-luxury-green text-white text-sm font-medium hover:bg-luxury-green/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                           >
-                            充值
+                            充值 ({selectedAgents.size})
                           </button>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -496,19 +522,36 @@ const Squad: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filteredAgents.map(agent => (
-                  <div key={agent.id} className="relative">
-                    {/* 选择框（仅空闲状态显示） */}
-                    {agent.status === 'idle' && showBatchPanel && (
+                  <div 
+                    key={agent.id} 
+                    className={`relative transition-all ${
+                      selectedAgents.has(agent.id) ? 'ring-2 ring-luxury-cyan rounded-2xl' : ''
+                    }`}
+                  >
+                    {/* 选择模式下的选择框 */}
+                    {agent.status === 'idle' && showBatchPanel && selectedAgents.size > 0 && (
                       <button
                         onClick={() => toggleAgentSelection(agent.id)}
-                        className="absolute -top-2 -right-2 z-10 w-8 h-8 rounded-lg bg-void-panel border border-white/20 flex items-center justify-center shadow-lg"
+                        className="absolute -top-2 -right-2 z-20 w-8 h-8 rounded-lg bg-luxury-cyan border-2 border-white flex items-center justify-center shadow-lg"
                       >
-                        {selectedAgents.has(agent.id) ? (
-                          <CheckSquare className="w-5 h-5 text-luxury-green" />
-                        ) : (
-                          <Square className="w-5 h-5 text-white/40" />
-                        )}
+                        <CheckSquare className="w-5 h-5 text-white" />
                       </button>
+                    )}
+                    {/* 选择模式下的未选中框 */}
+                    {agent.status === 'idle' && showBatchPanel && selectedAgents.size === 0 && (
+                      <button
+                        onClick={() => toggleAgentSelection(agent.id)}
+                        className="absolute -top-2 -right-2 z-20 w-8 h-8 rounded-lg bg-void-panel border-2 border-white/30 flex items-center justify-center shadow-lg hover:border-luxury-cyan transition-colors"
+                      >
+                        <Square className="w-5 h-5 text-white/40" />
+                      </button>
+                    )}
+                    {/* 非选择模式下显示状态 */}
+                    {agent.status === 'idle' && showBatchPanel && (
+                      <div 
+                        onClick={() => toggleAgentSelection(agent.id)}
+                        className="absolute inset-0 z-10 cursor-pointer"
+                      />
                     )}
                     <AgentCard agent={agent} />
                   </div>
