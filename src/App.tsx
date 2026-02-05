@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
 import TabBar from './components/TabBar';
@@ -9,8 +9,15 @@ import Wallet from './pages/Wallet';
 import Leaderboard from './pages/Leaderboard';
 import LiquidityMining from './pages/LiquidityMining';
 import PredictionMarket from './pages/PredictionMarket';
+import { useGameStore } from './store/gameStore';
 
 const App: React.FC = () => {
+  // 启动锦标赛定时器
+  useEffect(() => {
+    const { startTournamentScheduler } = useGameStore.getState();
+    startTournamentScheduler();
+  }, []);
+
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-cyber-bg">

@@ -46,6 +46,11 @@ interface GameStore {
   startTournament: (tournamentId: string) => void;
   advanceTournamentRound: (tournamentId: string) => void;
   getQualifiedAgentsForTournament: (tournamentId: string) => Agent[];
+  simulateMatch: (agentA: Agent, agentB: Agent) => Agent;
+  executeCurrentRound: (tournamentId: string) => void;
+  runFastTournament: (tournamentId: string) => void;
+  createChallengeTournament: () => string;
+  startTournamentScheduler: () => void;
 
   // 铸造费用
   mintCost: number;
@@ -1105,6 +1110,147 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     return qualified;
+  },
+
+  // ==================== 快速锦标赛模拟系统 ====================
+
+  // 模拟单场比赛并返回获胜者
+  simulateMatch: (agentA: Agent, agentB: Agent): Agent => {
+    // 计算胜率（基于攻击+防御+随机因素）
+    const powerA = agentA.attack + agentA.defense + Math.random() * 20;
+    const powerB = agentB.attack + agentB.defense + Math.random() * 20;
+    return powerA > powerB ? agentA : agentB;
+  },
+
+  // 快速执行当前轮次的所有比赛
+  executeCurrentRound: (tournamentId: string) => {
+    const { tournaments } = get();
+    const tournament = tournaments.find((t) => t.id === tournamentId);
+    if (!tournament || tournament.status !== 'ongoing') return;
+
+    const currentMatches = tournament.matches.filter((m) => m.round === tournament.currentRound);
+
+    // 模拟每场比赛
+    const updatedMatches = currentMatches.map((match) => {
+      if (match.winnerId || !match.agentA || !match.agentB) return match;
+
+      const winner = get().simulateMatch(match.agentA, match.agentB);
+      return {
+        ...match,
+        winnerId: winner.id,
+        endTime: Date.now(),
+      };
+    });
+
+    // 更新比赛结果
+    set((state) => ({
+      tournaments: state.tournaments.map((t) =>
+        t.id === tournamentId
+          ? {
+              ...t,
+              matches: t.matches.map((m) =>
+                updatedMatches.find((um) => um.id === m.id) || m
+              ),
+            }
+          : t
+      ),
+    }));
+  },
+
+  // 快速完成整个锦标赛（90秒内）
+  runFastTournament: async (tournamentId: string) => {
+    const tournament = get().tournaments.find((t) => t.id === tournamentId);
+    if (!tournament || tournament.type !== 'challenge') return;
+
+    // 轮次时间安排（总计90秒）
+    const roundTiming = {
+      round128: 0,      // 立即开始
+      round32: 15000,   // 15秒后开始32强
+      round8: 35000,    // 35秒后开始8强
+      semifinal: 55000, // 55秒后开始半决赛
+      final: 75000,     // 75秒后开始决赛
+    };
+
+    // 执行128强
+    get().executeCurrentRound(tournamentId);
+
+    // 按时间线执行各轮次
+    Object.entries(roundTiming).forEach(([round, delay]) => {
+      setTimeout(() => {
+        // 晋级到下一轮
+        get().advanceTournamentRound(tournamentId);
+
+        // 如果是决赛，不需要再执行比赛（advanceTournamentRound会处理结束逻辑）
+        if (round !== 'final') {
+          // 短暂延迟后执行当前轮次的比赛
+          setTimeout(() => {
+            get().executeCurrentRound(tournamentId);
+          }, 1000);
+        }
+      }, delay);
+    });
+  },
+
+  // 创建新的挑战赛
+  createChallengeTournament: () => {
+    const id = `challenge-${Date.now()}`;
+    const newTournament: Tournament = {
+      id,
+      name: `Challenge Arena #${get().tournaments.filter((t) => t.type === 'challenge').length + 1}`,
+      type: 'challenge',
+      status: 'registration',
+      prizePool: 5000,
+      participants: [],
+      maxParticipants: 128,
+      startTime: Date.now() + 60000, // 1分钟后开始
+      entryFee: 100,
+      currentRound: 'round128',
+      matches: [],
+      qualifiedAgents: [],
+    };
+
+    set((state) => ({
+      tournaments: [...state.tournaments, newTournament],
+    }));
+
+    return id;
+  },
+
+  // 启动锦标赛定时器系统
+  startTournamentScheduler: () => {
+    // 每分钟创建一个新的挑战赛
+    setInterval(() => {
+      const { tournaments } = get();
+
+      // 检查是否有正在报名或即将开始的挑战赛
+      const activeChallenges = tournaments.filter(
+        (t) => t.type === 'challenge' && (t.status === 'registration' || t.status === 'upcoming')
+      );
+
+      // 如果没有活跃的挑战赛，创建一个新的
+      if (activeChallenges.length === 0) {
+        const newTournamentId = get().createChallengeTournament();
+
+        // 55秒后开始锦标赛（给玩家5秒报名时间）
+        setTimeout(() => {
+          get().startTournament(newTournamentId);
+
+          // 开始快速锦标赛流程
+          setTimeout(() => {
+            get().runFastTournament(newTournamentId);
+          }, 1000);
+        }, 55000);
+      }
+    }, 60000); // 每分钟检查一次
+
+    // 初始化第一个挑战赛
+    const firstChallengeId = get().createChallengeTournament();
+    setTimeout(() => {
+      get().startTournament(firstChallengeId);
+      setTimeout(() => {
+        get().runFastTournament(firstChallengeId);
+      }, 1000);
+    }, 55000);
   },
 
   // 为锦标赛创建预测市场
