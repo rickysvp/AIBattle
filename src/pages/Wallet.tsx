@@ -70,7 +70,7 @@ const MON_TO_USDT_RATE = 0.052;
 const MON_PRICE_CHANGE_24H = 5.23;
 
 const WalletPage: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { wallet, myAgents, connectWallet, disconnectWallet } = useGameStore();
   
   // 弹窗状态
@@ -224,12 +224,14 @@ const WalletPage: React.FC = () => {
     const date = new Date(timestamp);
     const now = Date.now();
     const diff = now - timestamp;
-    
-    if (diff < 60000) return '刚刚';
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
-    
-    return date.toLocaleString('zh-CN', {
+    const isZh = i18n.language === 'zh-CN';
+
+    if (diff < 60000) return isZh ? '刚刚' : 'Just now';
+    if (diff < 3600000) return isZh ? `${Math.floor(diff / 60000)}分钟前` : `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return isZh ? `${Math.floor(diff / 3600000)}小时前` : `${Math.floor(diff / 3600000)}h ago`;
+
+    const locale = isZh ? 'zh-CN' : 'en-US';
+    return date.toLocaleString(locale, {
       month: 'numeric',
       day: 'numeric',
       hour: '2-digit',
@@ -920,25 +922,25 @@ const WalletPage: React.FC = () => {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                   <Image className="w-5 h-5 text-luxury-purple" />
-                  我的 NFT
+                  {t('wallet.myNFT')}
                   <span className="text-xs px-2 py-0.5 bg-luxury-purple/20 rounded-full text-luxury-purple">{nfts.length}</span>
                 </h3>
                 <button className="text-sm text-luxury-cyan hover:text-luxury-cyan-light flex items-center gap-1">
-                  查看全部 <ChevronRight className="w-4 h-4" />
+                  {t('wallet.viewAll')} <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
-              
-              <div className="grid grid-cols-3 gap-4">
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {nfts.map((nft) => (
-                  <div 
-                    key={nft.id} 
+                  <div
+                    key={nft.id}
                     onClick={() => { setSelectedNFT(nft); setShowNFTDetailModal(true); }}
-                    className="group relative bg-void-light rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all cursor-pointer overflow-hidden"
+                    className="group relative bg-void-light rounded-xl p-5 border border-white/10 hover:border-white/20 transition-all cursor-pointer overflow-hidden"
                   >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${getRarityColor(nft.rarity)} opacity-0 group-hover:opacity-20 rounded-xl transition-opacity`} />
-                    <div className="relative w-full aspect-square mb-3 rounded-lg overflow-hidden bg-void">
-                      <img 
-                        src={nft.image} 
+                    <div className={`absolute inset-0 bg-gradient-to-br ${getRarityColor(nft.rarity)} opacity-0 group-hover:opacity-30 rounded-xl transition-opacity`} />
+                    <div className="relative w-full aspect-square mb-4 rounded-lg overflow-hidden bg-void">
+                      <img
+                        src={nft.image}
                         alt={nft.name}
                         className="w-full h-full object-cover"
                       />
@@ -962,45 +964,45 @@ const WalletPage: React.FC = () => {
                   <div>
                     <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                       <Users className="w-5 h-5 text-luxury-cyan" />
-                      邀请好友
+                      {t('wallet.inviteFriends')}
                     </h3>
-                    <p className="text-sm text-white/60">邀请好友加入，双方各得 <span className="text-luxury-gold font-bold">100 $MON</span></p>
+                    <p className="text-sm text-white/60">{t('wallet.inviteDesc').replace('100 $MON', '<span class="text-luxury-gold font-bold">100 $MON</span>')}</p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowInviteDetailModal(true)}
                   className="px-6 py-3 rounded-xl bg-luxury-cyan text-white font-semibold hover:bg-luxury-cyan/90 transition-colors"
                 >
-                  查看详情
+                  {t('wallet.viewDetails')}
                 </button>
               </div>
-              
+
               <div className="mt-6 pt-6 border-t border-white/10">
                 <div className="flex items-center gap-4">
                   <div className="flex-1 bg-void-light rounded-xl px-4 py-3 border border-white/10">
-                    <p className="text-xs text-white/40 mb-1">你的邀请码</p>
+                    <p className="text-xs text-white/40 mb-1">{t('wallet.inviteCode')}</p>
                     <p className="text-lg font-mono text-white">AI2024VIP</p>
                   </div>
-                  <button 
+                  <button
                     onClick={copyInviteCode}
                     className="px-6 py-3 rounded-xl bg-void-light border border-white/20 text-white hover:bg-white/10 transition-colors"
                   >
-                    复制
+                    {t('common.copy')}
                   </button>
                 </div>
-                
+
                 <div className="grid grid-cols-3 gap-4 mt-4">
                   <div className="text-center p-3 bg-void-light/50 rounded-xl">
                     <p className="text-2xl font-bold text-luxury-cyan">{inviteRecords.length}</p>
-                    <p className="text-xs text-white/40">已邀请</p>
+                    <p className="text-xs text-white/40">{t('wallet.invited')}</p>
                   </div>
                   <div className="text-center p-3 bg-void-light/50 rounded-xl">
                     <p className="text-2xl font-bold text-luxury-gold">{inviteRecords.reduce((sum, r) => sum + r.reward, 0)}</p>
-                    <p className="text-xs text-white/40">获得奖励</p>
+                    <p className="text-xs text-white/40">{t('wallet.earned')}</p>
                   </div>
                   <div className="text-center p-3 bg-void-light/50 rounded-xl">
                     <p className="text-2xl font-bold text-luxury-green">{inviteRecords.filter(r => r.isActive).length}</p>
-                    <p className="text-xs text-white/40">活跃好友</p>
+                    <p className="text-xs text-white/40">{t('wallet.activeFriends')}</p>
                   </div>
                 </div>
               </div>
@@ -1012,14 +1014,14 @@ const WalletPage: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                     <Clock className="w-5 h-5 text-luxury-purple" />
-                    交易记录
+                    {t('wallet.transactions')}
                   </h3>
                   <button className="text-sm text-luxury-cyan hover:text-luxury-cyan-light flex items-center gap-1">
                     <Download className="w-4 h-4" />
-                    导出
+                    {t('wallet.export')}
                   </button>
                 </div>
-                
+
                 {/* Filter & Search */}
                 <div className="flex gap-3">
                   <div className="flex gap-2">
@@ -1028,12 +1030,12 @@ const WalletPage: React.FC = () => {
                         key={type}
                         onClick={() => setTxFilter(type)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                          txFilter === type 
-                            ? 'bg-luxury-cyan text-white' 
+                          txFilter === type
+                            ? 'bg-luxury-cyan text-white'
                             : 'bg-void-light text-white/60 hover:text-white'
                         }`}
                       >
-                        {type === 'all' ? '全部' : type === 'deposit' ? '充值' : type === 'withdraw' ? '提现' : type === 'swap' ? '兑换' : '战斗'}
+                        {type === 'all' ? t('wallet.all') : type === 'deposit' ? t('wallet.deposit') : type === 'withdraw' ? t('wallet.withdraw') : type === 'swap' ? t('wallet.swap') : t('arena.battles')}
                       </button>
                     ))}
                   </div>
@@ -1043,21 +1045,21 @@ const WalletPage: React.FC = () => {
                       type="text"
                       value={txSearchQuery}
                       onChange={(e) => setTxSearchQuery(e.target.value)}
-                      placeholder="搜索交易..."
+                      placeholder={t('wallet.search')}
                       className="w-full bg-void-light border border-white/10 rounded-lg pl-9 pr-3 py-1.5 text-sm text-white placeholder:text-white/30 focus:border-luxury-cyan focus:outline-none"
                     />
                   </div>
                 </div>
               </div>
-              
+
               <div className="divide-y divide-white/5">
                 {filteredTransactions.slice(0, 5).map(tx => {
                   const config = getTransactionIcon(tx.type);
                   const Icon = config.icon;
-                  
+
                   return (
-                    <div 
-                      key={tx.id} 
+                    <div
+                      key={tx.id}
                       onClick={() => { setSelectedTx(tx); setShowTxDetailModal(true); }}
                       className="p-4 flex items-center justify-between hover:bg-void-light/30 transition-colors cursor-pointer"
                     >
@@ -1069,7 +1071,7 @@ const WalletPage: React.FC = () => {
                           <p className="text-sm font-medium text-white">{tx.description}</p>
                           <div className="flex items-center gap-2">
                             <p className="text-xs text-white/40">{formatTime(tx.timestamp)}</p>
-                            {tx.status === 'pending' && <span className="text-[10px] px-1.5 py-0.5 bg-luxury-gold/20 text-luxury-gold rounded">处理中</span>}
+                            {tx.status === 'pending' && <span className="text-[10px] px-1.5 py-0.5 bg-luxury-gold/20 text-luxury-gold rounded">{t('wallet.pending')}</span>}
                           </div>
                         </div>
                       </div>
@@ -1083,20 +1085,20 @@ const WalletPage: React.FC = () => {
                   );
                 })}
               </div>
-              
+
               {filteredTransactions.length === 0 && (
                 <div className="p-12 text-center">
                   <div className="w-16 h-16 rounded-2xl bg-void-light/50 border border-white/5 flex items-center justify-center mx-auto mb-4">
                     <Clock className="w-8 h-8 text-white/20" />
                   </div>
-                  <p className="text-white/40">暂无交易记录</p>
+                  <p className="text-white/40">{t('wallet.noTransactions')}</p>
                 </div>
               )}
-              
+
               {filteredTransactions.length > 5 && (
                 <div className="p-4 text-center border-t border-white/5">
                   <button className="text-sm text-luxury-cyan hover:text-luxury-cyan-light">
-                    查看更多
+                    {t('common.loadMore')}
                   </button>
                 </div>
               )}

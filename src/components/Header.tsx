@@ -45,9 +45,7 @@ const Header: React.FC = () => {
         <div className="max-w-screen-xl mx-auto px-4 h-20 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center">
-          <h1 className="text-2xl font-bold font-display text-white tracking-wider">
-            AI<span className="text-gradient">rena</span>
-          </h1>
+          {/* Logo占位 */}
         </div>
 
         {/* 钱包连接 */}
