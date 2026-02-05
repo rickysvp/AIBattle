@@ -42,6 +42,21 @@ const Arena: React.FC = () => {
   // 排序状态
   const [sortBy, setSortBy] = useState<'balance' | 'winRate' | 'profit'>('balance');
 
+  // 用于测量左侧高度
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
+
+  useEffect(() => {
+    const updateHeight = () => {
+      if (leftPanelRef.current) {
+        setLeftPanelHeight(leftPanelRef.current.offsetHeight);
+      }
+    };
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, []);
+
   // 使用 ref 来管理计时器状态，避免闭包问题
   const timerStateRef = useRef<TimerState>({
     phase: 'waiting',
@@ -327,7 +342,7 @@ const Arena: React.FC = () => {
       <div className="max-w-screen-xl mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* 左侧：竞技场 */}
-          <div className="lg:col-span-3 space-y-6 relative">
+          <div ref={leftPanelRef} className="lg:col-span-3 space-y-6 relative">
             {/* 战斗画面 */}
             <div className="card-luxury rounded-2xl overflow-hidden">
               <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
@@ -464,9 +479,7 @@ const Arena: React.FC = () => {
                     我的日志
                   </button>
                 </div>
-                <span className="text-xs text-white/40">
-                  {logTab === 'arena' ? arena.battleLogs.length : myBattleLogs.length} 条记录
-                </span>
+
               </div>
               
               {/* 日志内容 */}
@@ -483,7 +496,7 @@ const Arena: React.FC = () => {
           {/* 右侧：我的小队 */}
           <div className="lg:col-span-2">
             {/* 小队概览 - 高度与左侧一致 */}
-            <div className="card-luxury rounded-2xl overflow-hidden h-[calc(100vh-180px)] flex flex-col">
+            <div className="card-luxury rounded-2xl overflow-hidden flex flex-col" style={{ height: leftPanelHeight > 0 ? leftPanelHeight : 'auto' }}>
               {/* 标题栏 + 铸造按钮 */}
               <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
