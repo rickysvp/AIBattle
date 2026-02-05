@@ -198,14 +198,34 @@ const Squad: React.FC = () => {
       <div className="max-w-screen-xl mx-auto px-4">
         {/* 页面标题 */}
         <div className="mb-8">
-          <div className="flex items-center gap-4 mb-2">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-luxury-cyan/20 to-luxury-purple/20 border border-luxury-cyan/30 flex items-center justify-center">
-              <Users className="w-6 h-6 text-luxury-cyan" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-luxury-cyan/20 to-luxury-purple/20 border border-luxury-cyan/30 flex items-center justify-center">
+                <Users className="w-6 h-6 text-luxury-cyan" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white font-display">我的小队</h1>
+                <p className="text-white/40">管理你的 AI Agents，铸造新的战士加入战斗</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white font-display">我的小队</h1>
-              <p className="text-white/40">管理你的 AI Agents，铸造新的战士加入战斗</p>
-            </div>
+
+            {/* 批量操作入口 - 右上角 */}
+            {wallet.connected && myAgents.length > 0 && (
+              <button
+                onClick={() => setShowBatchPanel(!showBatchPanel)}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border transition-all ${
+                  showBatchPanel
+                    ? 'bg-luxury-cyan/20 border-luxury-cyan/50 text-luxury-cyan'
+                    : 'bg-void-light border-white/10 text-white/60 hover:text-white hover:border-white/30'
+                }`}
+              >
+                <Zap className="w-4 h-4" />
+                <span className="text-sm font-medium">批量操作</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${showBatchPanel ? 'bg-luxury-cyan/20' : 'bg-white/10'}`}>
+                  {showBatchPanel ? '收起' : '展开'}
+                </span>
+              </button>
+            )}
           </div>
         </div>
         
@@ -263,139 +283,119 @@ const Squad: React.FC = () => {
             </div>
             
             {/* 批量操作面板 */}
-            {myAgents.length > 0 && (
+            {myAgents.length > 0 && showBatchPanel && (
               <div className="card-luxury rounded-2xl overflow-hidden mb-8 border-luxury-cyan/20">
-                <div className="px-6 py-4 border-b border-white/5 bg-gradient-to-r from-luxury-cyan/10 to-transparent">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Zap className="w-6 h-6 text-luxury-cyan" />
-                      <div>
-                        <h2 className="text-lg font-semibold text-white">批量操作</h2>
-                        <p className="text-xs text-white/40">快速管理多个 Agents</p>
+                <div className="p-6 space-y-6">
+                  {/* 一键操作区域 */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* 一键充值所有 */}
+                    <div className="p-4 bg-luxury-green/5 rounded-xl border border-luxury-green/20">
+                      <div className="flex items-center gap-2 mb-3">
+                        <BatteryCharging className="w-5 h-5 text-luxury-green" />
+                        <span className="text-sm font-medium text-white">一键充值所有</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={batchAmount}
+                          onChange={(e) => setBatchAmount(e.target.value)}
+                          placeholder="金额"
+                          className="flex-1 bg-void-light border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-luxury-green focus:outline-none"
+                        />
+                        <button
+                          onClick={handleRechargeAll}
+                          disabled={!batchAmount || parseFloat(batchAmount) <= 0 || idleAgents.length === 0}
+                          className="px-4 py-2 rounded-lg bg-luxury-green/20 border border-luxury-green/40 text-luxury-green hover:bg-luxury-green/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap"
+                        >
+                          充值全部 ({idleAgents.length})
+                        </button>
                       </div>
                     </div>
-                    <button
-                      onClick={() => setShowBatchPanel(!showBatchPanel)}
-                      className="text-sm text-luxury-cyan hover:text-luxury-cyan-light transition-colors"
-                    >
-                      {showBatchPanel ? '收起' : '展开'}
-                    </button>
+
+                    {/* 一键加入竞技场 */}
+                    <div className="p-4 bg-luxury-gold/5 rounded-xl border border-luxury-gold/20">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Rocket className="w-5 h-5 text-luxury-gold" />
+                        <span className="text-sm font-medium text-white">一键加入竞技场</span>
+                      </div>
+                      <button
+                        onClick={handleJoinAllArena}
+                        disabled={canJoinArena.length === 0}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-luxury-gold/20 border border-luxury-gold/40 text-luxury-gold hover:bg-luxury-gold/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                      >
+                        <LogIn className="w-4 h-4" />
+                        全部加入 ({canJoinArena.length})
+                      </button>
+                    </div>
                   </div>
-                </div>
-                
-                {showBatchPanel && (
-                  <div className="p-6 space-y-6">
-                    {/* 一键操作区域 */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* 一键充值所有 */}
-                      <div className="p-4 bg-luxury-green/5 rounded-xl border border-luxury-green/20">
-                        <div className="flex items-center gap-2 mb-3">
-                          <BatteryCharging className="w-5 h-5 text-luxury-green" />
-                          <span className="text-sm font-medium text-white">一键充值所有</span>
+
+                  {/* 分隔线 */}
+                  <div className="h-px bg-white/10" />
+
+                  {/* 选择操作区域 */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={toggleSelectAll}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-void-light border border-white/10 text-white/60 hover:text-white transition-colors"
+                        >
+                          {selectedAgents.size === idleAgents.length && idleAgents.length > 0 ? (
+                            <CheckSquare className="w-4 h-4 text-luxury-cyan" />
+                          ) : (
+                            <Square className="w-4 h-4" />
+                          )}
+                          <span className="text-sm">
+                            全选空闲 ({selectedAgents.size}/{idleAgents.length})
+                          </span>
+                        </button>
+                      </div>
+                      
+                      {/* 选中加入竞技场 */}
+                      <button
+                        onClick={handleBatchJoinArena}
+                        disabled={selectedAgents.size === 0}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-luxury-cyan/10 border border-luxury-cyan/30 text-luxury-cyan hover:bg-luxury-cyan/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <LogIn className="w-4 h-4" />
+                        <span className="text-sm font-medium">加入竞技场</span>
+                        <span className="text-xs bg-luxury-cyan/20 px-2 py-0.5 rounded-full">
+                          {selectedAgents.size}
+                        </span>
+                      </button>
+                    </div>
+                    
+                    {/* 批量充值（选中） */}
+                    {selectedAgents.size > 0 && (
+                      <div className="flex items-center gap-3 p-4 bg-void-light/50 rounded-xl border border-white/5 animate-slide-up">
+                        <div className="flex items-center gap-2 text-white/60">
+                          <Coins className="w-4 h-4" />
+                          <span className="text-sm">为选中的 {selectedAgents.size} 个 Agent 充值:</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex-1 relative">
                           <input
                             type="number"
                             value={batchAmount}
                             onChange={(e) => setBatchAmount(e.target.value)}
                             placeholder="金额"
-                            className="flex-1 bg-void-light border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-luxury-green focus:outline-none"
+                            className="w-32 bg-void-light border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-luxury-cyan focus:outline-none"
                           />
-                          <button
-                            onClick={handleRechargeAll}
-                            disabled={!batchAmount || parseFloat(batchAmount) <= 0 || idleAgents.length === 0}
-                            className="px-4 py-2 rounded-lg bg-luxury-green/20 border border-luxury-green/40 text-luxury-green hover:bg-luxury-green/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap"
-                          >
-                            充值全部 ({idleAgents.length})
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* 一键加入竞技场 */}
-                      <div className="p-4 bg-luxury-gold/5 rounded-xl border border-luxury-gold/20">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Rocket className="w-5 h-5 text-luxury-gold" />
-                          <span className="text-sm font-medium text-white">一键加入竞技场</span>
                         </div>
                         <button
-                          onClick={handleJoinAllArena}
-                          disabled={canJoinArena.length === 0}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-luxury-gold/20 border border-luxury-gold/40 text-luxury-gold hover:bg-luxury-gold/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                          onClick={handleBatchRecharge}
+                          disabled={!batchAmount || parseFloat(batchAmount) <= 0}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-luxury-cyan/10 border border-luxury-cyan/30 text-luxury-cyan hover:bg-luxury-cyan/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
-                          <LogIn className="w-4 h-4" />
-                          全部加入 ({canJoinArena.length})
+                          <ArrowRight className="w-4 h-4" />
+                          确认充值
                         </button>
                       </div>
-                    </div>
-
-                    {/* 分隔线 */}
-                    <div className="h-px bg-white/10" />
-
-                    {/* 选择操作区域 */}
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={toggleSelectAll}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-void-light border border-white/10 text-white/60 hover:text-white transition-colors"
-                          >
-                            {selectedAgents.size === idleAgents.length && idleAgents.length > 0 ? (
-                              <CheckSquare className="w-4 h-4 text-luxury-cyan" />
-                            ) : (
-                              <Square className="w-4 h-4" />
-                            )}
-                            <span className="text-sm">
-                              全选空闲 ({selectedAgents.size}/{idleAgents.length})
-                            </span>
-                          </button>
-                        </div>
-                        
-                        {/* 选中加入竞技场 */}
-                        <button
-                          onClick={handleBatchJoinArena}
-                          disabled={selectedAgents.size === 0}
-                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-luxury-cyan/10 border border-luxury-cyan/30 text-luxury-cyan hover:bg-luxury-cyan/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          <LogIn className="w-4 h-4" />
-                          <span className="text-sm font-medium">加入竞技场</span>
-                          <span className="text-xs bg-luxury-cyan/20 px-2 py-0.5 rounded-full">
-                            {selectedAgents.size}
-                          </span>
-                        </button>
-                      </div>
-                      
-                      {/* 批量充值（选中） */}
-                      {selectedAgents.size > 0 && (
-                        <div className="flex items-center gap-3 p-4 bg-void-light/50 rounded-xl border border-white/5 animate-slide-up">
-                          <div className="flex items-center gap-2 text-white/60">
-                            <Coins className="w-4 h-4" />
-                            <span className="text-sm">为选中的 {selectedAgents.size} 个 Agent 充值:</span>
-                          </div>
-                          <div className="flex-1 relative">
-                            <input
-                              type="number"
-                              value={batchAmount}
-                              onChange={(e) => setBatchAmount(e.target.value)}
-                              placeholder="金额"
-                              className="w-32 bg-void-light border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-luxury-cyan focus:outline-none"
-                            />
-                          </div>
-                          <button
-                            onClick={handleBatchRecharge}
-                            disabled={!batchAmount || parseFloat(batchAmount) <= 0}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-luxury-cyan/10 border border-luxury-cyan/30 text-luxury-cyan hover:bg-luxury-cyan/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <ArrowRight className="w-4 h-4" />
-                            确认充值
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             )}
-            
+
             {/* 快速铸造区 */}
             <div className="card-luxury rounded-2xl overflow-hidden mb-8 border-luxury-purple/20">
               <div className="px-6 py-5 border-b border-white/5 bg-gradient-to-r from-luxury-purple/10 to-transparent">
