@@ -10,10 +10,10 @@ const Header: React.FC = () => {
   const [hovered, setHovered] = useState(false);
   const [showVersion, setShowVersion] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
+  const [showWalletMenu, setShowWalletMenu] = useState(false);
 
   const handleConnect = (type: 'twitter' | 'google' | 'wallet') => {
-    // 目前都调用相同的连接逻辑，后续可以根据类型区分
-    connectWallet();
+    connectWallet(type);
     setShowConnectModal(false);
   };
 
@@ -25,10 +25,6 @@ const Header: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const formatAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
@@ -39,7 +35,7 @@ const Header: React.FC = () => {
     >
         <div className="max-w-screen-xl mx-auto px-4 h-20 flex items-center justify-between">
         {/* Logo */}
-        <div 
+        <div
           className="flex items-center gap-4 group cursor-pointer"
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
@@ -47,27 +43,27 @@ const Header: React.FC = () => {
           <div className="relative">
             {/* 发光背景 */}
             <div className={`absolute inset-0 bg-gradient-to-br from-luxury-purple to-luxury-cyan rounded-xl blur-xl transition-opacity duration-300 ${hovered ? 'opacity-60' : 'opacity-40'}`} />
-            
+
             {/* Logo 图标 */}
             <div className="relative w-12 h-12 bg-gradient-to-br from-void-panel to-void-elevated rounded-xl border border-luxury-purple/30 flex items-center justify-center overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-luxury-purple/20 to-luxury-cyan/20" />
               <span className="relative text-2xl font-bold text-gradient font-display">A</span>
-              
+
               {/* 装饰角标 */}
               <div className="absolute top-0 right-0 w-3 h-3 bg-luxury-gold rounded-bl-lg" />
             </div>
-            
+
             {/* 脉冲动画 */}
             <div className="absolute -inset-1 bg-gradient-to-r from-luxury-purple via-luxury-cyan to-luxury-purple rounded-xl opacity-0 group-hover:opacity-30 blur-md transition-opacity duration-300" />
           </div>
-          
+
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold font-display text-white tracking-wider">
                 AI<span className="text-gradient">rena</span>
               </h1>
               {/* 版本号 */}
-              <div 
+              <div
                 className="relative"
                 onMouseEnter={() => setShowVersion(true)}
                 onMouseLeave={() => setShowVersion(false)}
@@ -75,7 +71,7 @@ const Header: React.FC = () => {
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-luxury-purple/20 text-luxury-purple-light border border-luxury-purple/30 cursor-pointer hover:bg-luxury-purple/30 transition-colors">
                   v{versionData.version}
                 </span>
-                
+
                 {/* 版本信息弹窗 */}
                 {showVersion && (
                   <div className="absolute top-full left-0 mt-2 w-64 glass-strong rounded-xl border border-white/10 p-4 z-50 animate-scale-in">
@@ -94,7 +90,7 @@ const Header: React.FC = () => {
                       </div>
                       <div className="pt-2 border-t border-white/10">
                         <p className="text-white/40 mb-1">部署地址</p>
-                        <a 
+                        <a
                           href={versionData.deployments.vercel.url}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -102,7 +98,7 @@ const Header: React.FC = () => {
                         >
                           Vercel →
                         </a>
-                        <a 
+                        <a
                           href={versionData.deployments.lovable.url}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -135,7 +131,7 @@ const Header: React.FC = () => {
                     <p className="text-sm font-bold text-luxury-gold font-mono">{wallet.balance.toLocaleString()}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-3 pl-3">
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-luxury-purple/20 to-luxury-rose/20 border border-luxury-purple/30 flex items-center justify-center">
                     <Sparkles className="w-4 h-4 text-luxury-purple-light" />
@@ -146,21 +142,69 @@ const Header: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
-              {/* 地址和断开按钮 */}
-              <div className="flex items-center gap-2">
-                <div className="glass rounded-xl px-4 py-2 border border-luxury-cyan/30 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-luxury-green animate-pulse" />
-                  <span className="text-sm text-white/80 font-mono">{formatAddress(wallet.address)}</span>
-                </div>
-                
+
+              {/* 用户信息下拉菜单 */}
+              <div className="relative">
                 <button
-                  onClick={disconnectWallet}
-                  className="p-3 glass rounded-xl border border-white/10 text-white/60 hover:text-luxury-rose hover:border-luxury-rose/50 transition-all duration-300 hover:shadow-lg hover:shadow-luxury-rose/20"
-                  title="断开连接"
+                  onClick={() => setShowWalletMenu(!showWalletMenu)}
+                  className="flex items-center gap-3 glass rounded-xl px-3 py-2 border border-white/10 hover:border-white/20 transition-colors"
                 >
-                  <LogOut className="w-5 h-5" />
+                  <img
+                    src={wallet.avatar}
+                    alt="avatar"
+                    className="w-8 h-8 rounded-full border border-white/20"
+                  />
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-white">{wallet.nickname}</p>
+                    <p className="text-[10px] text-white/40">
+                      {wallet.loginType === 'wallet' ? `0x...${wallet.address.slice(-6)}` : wallet.loginType}
+                    </p>
+                  </div>
                 </button>
+
+                {/* 下拉菜单 */}
+                {showWalletMenu && (
+                  <div className="absolute top-full right-0 mt-2 w-56 glass-strong rounded-xl border border-white/10 p-4 z-50 animate-scale-in">
+                    {/* 用户信息 */}
+                    <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
+                      <img
+                        src={wallet.avatar}
+                        alt="avatar"
+                        className="w-12 h-12 rounded-full border border-white/20"
+                      />
+                      <div>
+                        <p className="font-bold text-white">{wallet.nickname}</p>
+                        <p className="text-xs text-white/40">
+                          {wallet.loginType === 'wallet' ? `Wallet: 0x...${wallet.address.slice(-6)}` : `Login: ${wallet.loginType}`}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 余额信息 */}
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-white/40">Balance</span>
+                        <span className="text-luxury-gold font-mono">{wallet.balance.toLocaleString()} $MON</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-white/40">Locked</span>
+                        <span className="text-luxury-purple-light font-mono">{wallet.lockedBalance.toLocaleString()} $MON</span>
+                      </div>
+                    </div>
+
+                    {/* 断开连接按钮 - 放在最下面 */}
+                    <button
+                      onClick={() => {
+                        disconnectWallet();
+                        setShowWalletMenu(false);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-luxury-rose/10 border border-luxury-rose/30 text-luxury-rose hover:bg-luxury-rose/20 transition-colors text-sm font-medium"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Disconnect
+                    </button>
+                  </div>
+                )}
               </div>
             </>
           ) : (
@@ -190,7 +234,7 @@ const Header: React.FC = () => {
       />
         </div>
       </div>
-      
+
       {/* 底部渐变线 */}
       <div className={`h-px bg-gradient-to-r from-transparent via-luxury-purple/50 to-transparent transition-opacity duration-300 ${scrolled ? 'opacity-100' : 'opacity-0'}`} />
     </header>

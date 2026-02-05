@@ -5,7 +5,7 @@ import { generateRandomAgent, generateSystemAgents } from '../utils/agentGenerat
 interface GameStore {
   // 钱包状态
   wallet: WalletState;
-  connectWallet: () => void;
+  connectWallet: (type?: 'twitter' | 'google' | 'wallet') => void;
   disconnectWallet: () => void;
 
   // 玩家的 Agents
@@ -49,22 +49,47 @@ export const useGameStore = create<GameStore>((set, get) => ({
     address: '',
     balance: 10000,
     lockedBalance: 0,
+    loginType: null,
+    nickname: '',
+    avatar: '',
   },
-  
-  connectWallet: () => {
-    const randomAddress = '0x' + Array.from({ length: 40 }, () => 
+
+  connectWallet: (type: 'twitter' | 'google' | 'wallet' = 'wallet') => {
+    const randomAddress = '0x' + Array.from({ length: 40 }, () =>
       Math.floor(Math.random() * 16).toString(16)
     ).join('');
+
+    // 生成昵称和头像
+    let nickname = '';
+    let avatar = '';
+
+    if (type === 'twitter') {
+      const twitterNames = ['CryptoWhale', 'MoonHunter', 'AlphaTrader', 'DeFiKing', 'NFTCollector'];
+      nickname = twitterNames[Math.floor(Math.random() * twitterNames.length)];
+      avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${randomAddress}&backgroundColor=1da1f2`;
+    } else if (type === 'google') {
+      const googleNames = ['DiamondHands', 'TokenMaster', 'BlockChainer', 'Web3Explorer', 'ChainSurfer'];
+      nickname = googleNames[Math.floor(Math.random() * googleNames.length)];
+      avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${randomAddress}&backgroundColor=4285f4`;
+    } else {
+      // 钱包登录 - 使用后6位作为昵称，分配默认头像
+      nickname = randomAddress.slice(-6).toUpperCase();
+      avatar = `https://api.dicebear.com/7.x/identicon/svg?seed=${randomAddress}&backgroundColor=b6e3f4`;
+    }
+
     set({
       wallet: {
         connected: true,
         address: randomAddress,
         balance: 10000,
         lockedBalance: 0,
+        loginType: type,
+        nickname,
+        avatar,
       }
     });
   },
-  
+
   disconnectWallet: () => {
     set({
       wallet: {
@@ -72,6 +97,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         address: '',
         balance: 0,
         lockedBalance: 0,
+        loginType: null,
+        nickname: '',
+        avatar: '',
       },
       myAgents: [],
     });

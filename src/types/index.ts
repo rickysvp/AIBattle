@@ -50,6 +50,9 @@ export interface WalletState {
   address: string;
   balance: number;
   lockedBalance: number;
+  loginType: 'twitter' | 'google' | 'wallet' | null;
+  nickname: string;
+  avatar: string;
 }
 
 // 锦标赛类型
