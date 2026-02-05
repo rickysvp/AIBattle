@@ -17,7 +17,8 @@ import {
   Square,
   LogIn,
   BatteryCharging,
-  Rocket
+  Rocket,
+  Lock
 } from 'lucide-react';
 
 const Squad: React.FC = () => {
@@ -191,6 +192,8 @@ const Squad: React.FC = () => {
   
   const totalBalance = myAgents.reduce((sum, a) => sum + a.balance, 0);
   const totalProfit = myAgents.reduce((sum, a) => sum + a.earnings, 0);
+  const agentsTotalBalance = totalBalance;
+  const profitPercentage = totalBalance > 0 ? (totalProfit / totalBalance) * 100 : 0;
   const avgWinRate = myAgents.length > 0
     ? Math.round(myAgents.reduce((sum, a) => sum + (a.wins + a.losses > 0 ? a.wins / (a.wins + a.losses) : 0), 0) / myAgents.length * 100)
     : 0;
@@ -404,11 +407,11 @@ const Squad: React.FC = () => {
               <div className="card-luxury rounded-2xl p-5">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-xl bg-luxury-gold/10 border border-luxury-gold/20 flex items-center justify-center">
-                    <Wallet className="w-5 h-5 text-luxury-gold" />
+                    <Lock className="w-5 h-5 text-luxury-gold" />
                   </div>
-                  <span className="text-xs text-white/40 uppercase tracking-wider">{t('wallet.totalBalance')}</span>
+                  <span className="text-xs text-white/40 uppercase tracking-wider">{t('wallet.locked')}</span>
                 </div>
-                <p className="text-3xl font-bold text-luxury-gold font-mono">{totalBalance.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-luxury-gold font-mono">{agentsTotalBalance.toLocaleString()}</p>
               </div>
 
               <div className="card-luxury rounded-2xl p-5">
@@ -420,6 +423,9 @@ const Squad: React.FC = () => {
                 </div>
                 <p className={`text-3xl font-bold font-mono ${totalProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
                   {totalProfit >= 0 ? '+' : ''}{totalProfit.toLocaleString()}
+                </p>
+                <p className={`text-sm mt-1 ${profitPercentage >= 0 ? 'text-luxury-green/70' : 'text-luxury-rose/70'}`}>
+                  {profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(2)}%
                 </p>
               </div>
 
