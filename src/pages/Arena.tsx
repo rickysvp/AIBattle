@@ -312,7 +312,7 @@ const Arena: React.FC = () => {
                     <Swords className="w-5 h-5 text-luxury-purple-light" />
                   </div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-semibold text-white">AIrena</h2>
+                    <h2 className="text-base font-semibold text-white">AIrena</h2>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-luxury-gold/20 text-luxury-gold border border-luxury-gold/30 font-mono">
                       Round {displaySystemRounds.toLocaleString()}
                     </span>
