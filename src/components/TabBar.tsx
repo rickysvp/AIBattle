@@ -53,16 +53,16 @@ const TabBar: React.FC = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
-      {/* 顶部渐变遮罩 - 等宽 */}
-      <div className="absolute bottom-full left-0 right-0 h-24 bg-gradient-to-t from-void via-void/80 to-transparent pointer-events-none" />
+      {/* 顶部渐变遮罩 - 降低高度 */}
+      <div className="absolute bottom-full left-0 right-0 h-8 bg-gradient-to-t from-void via-void/60 to-transparent pointer-events-none" />
 
       {/* TabBar容器 */}
-      <div className="relative bg-void-panel/95 backdrop-blur-xl border-t border-white/10">
+      <div className="relative bg-void-panel/80 backdrop-blur-md border-t border-white/5">
         {/* 顶部光线 - 全宽 */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
         <div className="max-w-screen-lg mx-auto px-4">
-          <div className="flex items-center justify-around py-2">
+          <div className="flex items-center justify-around py-1">
             {tabs.map((tab, index) => {
               const isActive = index === activeIndex;
               const isHovered = index === hoveredIndex;
@@ -184,7 +184,7 @@ const TabBar: React.FC = () => {
         </div>
 
         {/* 底部安全区域（移动端） */}
-        <div className="h-safe-area-inset-bottom bg-void-panel/95" />
+        <div className="h-safe-area-inset-bottom bg-void-panel/80" />
       </div>
     </nav>
   );
