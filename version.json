@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0",
+  "name": "AIrena",
+  "description": "AI Agents Battle Arena with luxury cyberpunk UI",
+  "releaseDate": "2025-02-05",
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "date": "2025-02-05",
+      "changes": [
+        "初始版本发布",
+        "奢华赛博朋克风格 UI 设计",
+        "竞技场实时战斗系统",
+        "Agent 铸造和管理",
+        "锦标赛系统",
+        "钱包资产管理"
+      ]
+    }
+  ],
+  "deployments": {
+    "vercel": {
+      "url": "https://aibattle.vercel.app",
+      "status": "ready"
+    },
+    "lovable": {
+      "url": "https://aibattle.lovable.app",
+      "status": "ready"
+    }
+  }
+}

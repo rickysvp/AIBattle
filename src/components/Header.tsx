@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { Wallet, LogOut, Zap, Sparkles } from 'lucide-react';
+import { Wallet, LogOut, Zap, Sparkles, GitBranch } from 'lucide-react';
+import versionData from '../../version.json';
 
 const Header: React.FC = () => {
   const { wallet, connectWallet, disconnectWallet } = useGameStore();
   const [scrolled, setScrolled] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [showVersion, setShowVersion] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -52,9 +54,60 @@ const Header: React.FC = () => {
           </div>
           
           <div>
-            <h1 className="text-2xl font-bold font-display text-white tracking-wider">
-              AI<span className="text-gradient">rena</span>
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold font-display text-white tracking-wider">
+                AI<span className="text-gradient">rena</span>
+              </h1>
+              {/* 版本号 */}
+              <div 
+                className="relative"
+                onMouseEnter={() => setShowVersion(true)}
+                onMouseLeave={() => setShowVersion(false)}
+              >
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-luxury-purple/20 text-luxury-purple-light border border-luxury-purple/30 cursor-pointer hover:bg-luxury-purple/30 transition-colors">
+                  v{versionData.version}
+                </span>
+                
+                {/* 版本信息弹窗 */}
+                {showVersion && (
+                  <div className="absolute top-full left-0 mt-2 w-64 glass-strong rounded-xl border border-white/10 p-4 z-50 animate-scale-in">
+                    <div className="flex items-center gap-2 mb-3">
+                      <GitBranch className="w-4 h-4 text-luxury-purple" />
+                      <span className="text-sm font-semibold text-white">版本信息</span>
+                    </div>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-white/40">当前版本</span>
+                        <span className="text-luxury-gold font-mono">v{versionData.version}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/40">发布日期</span>
+                        <span className="text-white/80">{versionData.releaseDate}</span>
+                      </div>
+                      <div className="pt-2 border-t border-white/10">
+                        <p className="text-white/40 mb-1">部署地址</p>
+                        <a 
+                          href={versionData.deployments.vercel.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-luxury-cyan hover:underline mb-1"
+                        >
+                          Vercel →
+                        </a>
+                        <a 
+                          href={versionData.deployments.lovable.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-luxury-purple hover:underline"
+                        >
+                          Lovable →
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
             <p className="text-xs text-white/40 font-mono tracking-widest uppercase">Elite Battle Arena</p>
           </div>
         </div>

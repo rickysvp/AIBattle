@@ -1,0 +1,64 @@
+name: Deploy AIrena
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build project
+        run: npm run build
+        
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./version.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Deploy to Vercel
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            ## AIrena v${{ steps.version.outputs.version }}
+            
+            ### 部署地址
+            - 🚀 Vercel: https://aibattle.vercel.app
+            - 💜 Lovable: https://aibattle.lovable.app
+            
+            ### 更新内容
+            查看 [version.json](./version.json) 了解详细变更日志。
+          draft: false
+          prerelease: false

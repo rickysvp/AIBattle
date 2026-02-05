@@ -1,6 +1,43 @@
 # AIrena - AI Agents 大乱斗
 
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](./version.json)
+[![Vercel](https://img.shields.io/badge/Vercel-deployed-black?logo=vercel)](https://aibattle.vercel.app)
+[![Lovable](https://img.shields.io/badge/Lovable-deployed-purple?logo=lovable)](https://aibattle.lovable.app)
+
 基于 Monad 链的 AI Agents 大乱斗游戏网站，参考 airenademo.vercel.app 模式设计。
+
+## 🚀 在线预览
+
+| 平台 | 地址 | 状态 |
+|------|------|------|
+| 🚀 **Vercel** | [aibattle.vercel.app](https://aibattle.vercel.app) | ✅ 已部署 |
+| 💜 **Lovable** | [aibattle.lovable.app](https://aibattle.lovable.app) | ✅ 已部署 |
+| 🖥️ **本地开发** | http://localhost:5173 | 开发中 |
+
+## 📋 版本信息
+
+**当前版本**: v1.0.0
+
+查看 [version.json](./version.json) 了解详细版本历史和变更日志。
+
+### 版本管理
+
+```bash
+# 查看当前版本
+node scripts/version.js
+
+# 更新补丁版本 (1.0.0 -> 1.0.1)
+node scripts/version.js patch
+
+# 更新次要版本 (1.0.0 -> 1.1.0)
+node scripts/version.js minor
+
+# 更新主要版本 (1.0.0 -> 2.0.0)
+node scripts/version.js major
+
+# 设置指定版本
+node scripts/version.js 1.2.3
+```
 
 ## 🎮 项目概述
 
@@ -34,7 +71,7 @@ AIrena 是一个去中心化的 AI Agents 竞技游戏平台，玩家可以铸�
 
 ## 🎨 视觉设计
 
-- **赛博朋克 + 像素风格**：霓虹发光效果、深色主题
+- **赛博朋克奢华风格**：霓虹发光效果、深色主题、玻璃态设计
 - **超级马里奥风格像素人**：6种不同风格的 Agent 造型
 - **战斗动画**：子弹轨迹、伤害数字、爆炸特效
 - **游戏化界面**：底部 Tab 导航、卡片式布局
@@ -42,56 +79,66 @@ AIrena 是一个去中心化的 AI Agents 竞技游戏平台，玩家可以铸�
 ## 🛠️ 技术栈
 
 - **前端框架**：React 18 + TypeScript
-- **构建工具**：Vite
-- **样式方案**：Tailwind CSS
+- **构建工具**：Vite 5
+- **样式方案**：Tailwind CSS 3
 - **状态管理**：Zustand
 - **动画渲染**：Canvas API
+- **图标库**：Lucide React
 
 ## 📦 安装运行
 
 ```bash
+# 克隆仓库
+git clone https://github.com/rickysvp/aibattle.git
+cd aibattle
+
 # 安装依赖
-pnpm install
+npm install
 
 # 开发模式
-pnpm dev
+npm run dev
 
 # 生产构建
-pnpm build
+npm run build
 
 # 预览生产版本
-pnpm preview
+npm run preview
 ```
 
 ## 📁 项目结构
 
 ```
 airena-web/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml       # GitHub Actions 自动部署
+├── scripts/
+│   └── version.js           # 版本管理脚本
 ├── src/
-│   ├── components/     # 组件
-│   │   ├── ArenaCanvas.tsx    # 竞技场战斗画面
-│   │   ├── PixelAgent.tsx     # 像素 Agent 组件
-│   │   ├── BattleLog.tsx      # 战斗日志
-│   │   ├── AgentCard.tsx      # Agent 卡片
-│   │   ├── Header.tsx         # 顶部导航
-│   │   └── TabBar.tsx         # 底部导航
-│   ├── pages/          # 页面
-│   │   ├── Arena.tsx          # 竞技场
-│   │   ├── Squad.tsx          # 小队
-│   │   ├── Tournament.tsx     # 锦标赛
-│   │   └── Wallet.tsx         # 钱包
-│   ├── store/          # 状态管理
+│   ├── components/          # 组件
+│   │   ├── ArenaCanvas.tsx  # 竞技场战斗画面
+│   │   ├── PixelAgent.tsx   # 像素 Agent 组件
+│   │   ├── BattleLog.tsx    # 战斗日志
+│   │   ├── AgentCard.tsx    # Agent 卡片
+│   │   ├── Header.tsx       # 顶部导航
+│   │   └── TabBar.tsx       # 底部导航
+│   ├── pages/               # 页面
+│   │   ├── Arena.tsx        # 竞技场
+│   │   ├── Squad.tsx        # 小队
+│   │   ├── Tournament.tsx   # 锦标赛
+│   │   └── Wallet.tsx       # 钱包
+│   ├── store/               # 状态管理
 │   │   └── gameStore.ts
-│   ├── types/          # 类型定义
+│   ├── types/               # 类型定义
 │   │   └── index.ts
-│   ├── utils/          # 工具函数
+│   ├── utils/               # 工具函数
 │   │   └── agentGenerator.ts
-│   ├── styles/         # 样式
+│   ├── styles/              # 样式
 │   │   └── index.css
 │   ├── App.tsx
 │   └── main.tsx
-├── public/
-├── index.html
+├── version.json             # 版本信息
+├── vercel.json              # Vercel 部署配置
 ├── package.json
 ├── vite.config.ts
 ├── tailwind.config.js
@@ -106,6 +153,22 @@ airena-web/
 4. **结算阶段**：显示 TOP3 盈利，更新资产
 5. **等待阶段**：5秒后开始下一轮
 
+## 🔄 自动部署
+
+项目配置了 GitHub Actions 自动部署：
+
+- **推送至 main 分支**：自动部署到 Vercel
+- **创建版本标签 (v*)**：自动创建 GitHub Release
+- **PR 检查**：自动构建测试
+
+### 部署 Secrets 配置
+
+需要在 GitHub 仓库设置以下 Secrets：
+
+- `VERCEL_TOKEN` - Vercel 访问令牌
+- `VERCEL_ORG_ID` - Vercel 组织 ID
+- `VERCEL_PROJECT_ID` - Vercel 项目 ID
+
 ## 🔮 后续规划
 
 - [ ] 接入 Monad 链智能合约
@@ -118,3 +181,9 @@ airena-web/
 ## 📄 许可证
 
 MIT License
+
+---
+
+<p align="center">
+  Made with ❤️ by AIrena Team
+</p>
