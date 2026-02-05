@@ -1,0 +1,459 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Agent, Projectile, DamageNumber } from '../types';
+import { useGameStore } from '../store/gameStore';
+import PixelAgent from './PixelAgent';
+import { Swords, Users, Timer, Trophy } from 'lucide-react';
+
+interface ArenaCanvasProps {
+  participants: Agent[];
+  phase: string;
+  countdown: number;
+  selectedSlots: number[];
+}
+
+const ArenaCanvas: React.FC<ArenaCanvasProps> = ({ 
+  participants, 
+  phase, 
+  countdown,
+  selectedSlots 
+}) => {
+  const [projectiles, setProjectiles] = useState<Projectile[]>([]);
+  const [damageNumbers, setDamageNumbers] = useState<DamageNumber[]>([]);
+  const [explosions, setExplosions] = useState<{id: string; x: number; y: number; timestamp: number}[]>([]);
+  const [attackingAgents, setAttackingAgents] = useState<Set<string>>(new Set());
+  const [hurtAgents, setHurtAgents] = useState<Set<string>>(new Set());
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<number>();
+  
+  const addBattleLog = useGameStore(state => state.addBattleLog);
+  const updateParticipant = useGameStore(state => state.updateParticipant);
+  const roundNumber = useGameStore(state => state.arena.roundNumber);
+  
+  // 战斗动画循环
+  useEffect(() => {
+    if (phase !== 'fighting' || participants.length < 2) return;
+    
+    const battleInterval = setInterval(() => {
+      const aliveAgents = participants.filter(a => a.hp > 0);
+      if (aliveAgents.length < 2) return;
+      
+      const attackerIndex = Math.floor(Math.random() * aliveAgents.length);
+      let targetIndex = Math.floor(Math.random() * aliveAgents.length);
+      while (targetIndex === attackerIndex) {
+        targetIndex = Math.floor(Math.random() * aliveAgents.length);
+      }
+      
+      const attacker = aliveAgents[attackerIndex];
+      const target = aliveAgents[targetIndex];
+      
+      const attackerSlot = participants.findIndex(p => p.id === attacker.id);
+      const targetSlot = participants.findIndex(p => p.id === target.id);
+      
+      const attackerPos = getSlotPosition(attackerSlot, participants.length);
+      const targetPos = getSlotPosition(targetSlot, participants.length);
+      
+      // 设置攻击动画
+      setAttackingAgents(prev => new Set(prev).add(attacker.id));
+      setTimeout(() => {
+        setAttackingAgents(prev => {
+          const next = new Set(prev);
+          next.delete(attacker.id);
+          return next;
+        });
+      }, 300);
+      
+      // 创建子弹
+      const projectile: Projectile = {
+        id: Math.random().toString(36).substr(2, 9),
+        fromX: attackerPos.x,
+        fromY: attackerPos.y,
+        toX: targetPos.x,
+        toY: targetPos.y,
+        color: attacker.color,
+        progress: 0,
+      };
+      setProjectiles(prev => [...prev, projectile]);
+      
+      // 延迟计算伤害
+      setTimeout(() => {
+        const isCrit = Math.random() > 0.8;
+        const baseDamage = attacker.attack - target.defense + Math.floor(Math.random() * 10);
+        const damage = Math.max(1, isCrit ? Math.floor(baseDamage * 1.5) : baseDamage);
+        const newHp = Math.max(0, target.hp - damage);
+        
+        // 设置受伤动画
+        setHurtAgents(prev => new Set(prev).add(target.id));
+        setTimeout(() => {
+          setHurtAgents(prev => {
+            const next = new Set(prev);
+            next.delete(target.id);
+            return next;
+          });
+        }, 300);
+        
+        // 添加伤害数字
+        setDamageNumbers(prev => [...prev, {
+          id: Math.random().toString(36).substr(2, 9),
+          x: targetPos.x,
+          y: targetPos.y,
+          damage,
+          isCrit,
+          timestamp: Date.now(),
+        }]);
+        
+        // 更新目标 HP
+        updateParticipant(target.id, { hp: newHp, status: newHp <= 0 ? 'dead' : 'fighting' });
+        
+        // 击杀效果
+        if (newHp <= 0) {
+          setExplosions(prev => [...prev, {
+            id: Math.random().toString(36).substr(2, 9),
+            x: targetPos.x,
+            y: targetPos.y,
+            timestamp: Date.now(),
+          }]);
+          
+          addBattleLog({
+            type: 'kill',
+            attacker,
+            defender: target,
+            damage,
+            message: `${attacker.name} 击杀了 ${target.name}！`,
+            isHighlight: true,
+          });
+          updateParticipant(attacker.id, { kills: attacker.kills + 1 });
+        } else {
+          addBattleLog({
+            type: 'attack',
+            attacker,
+            defender: target,
+            damage,
+            message: `${attacker.name} 对 ${target.name} 造成 ${damage} 点伤害`,
+          });
+        }
+      }, 200);
+    }, 400);
+    
+    return () => clearInterval(battleInterval);
+  }, [phase, participants, addBattleLog, updateParticipant]);
+  
+  // 子弹动画
+  useEffect(() => {
+    const animateProjectiles = () => {
+      setProjectiles(prev => 
+        prev
+          .map(p => ({ ...p, progress: p.progress + 0.15 }))
+          .filter(p => p.progress < 1)
+      );
+      animationRef.current = requestAnimationFrame(animateProjectiles);
+    };
+    
+    animationRef.current = requestAnimationFrame(animateProjectiles);
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, []);
+  
+  // 清理伤害数字和爆炸效果
+  useEffect(() => {
+    const cleanup = setInterval(() => {
+      const now = Date.now();
+      setDamageNumbers(prev => prev.filter(d => now - d.timestamp < 1000));
+      setExplosions(prev => prev.filter(e => now - e.timestamp < 500));
+    }, 100);
+    return () => clearInterval(cleanup);
+  }, []);
+  
+  // 获取坑位位置（百分比）
+  const getSlotPosition = (index: number, total: number) => {
+    const angle = (index / Math.max(total, 10)) * Math.PI * 2 - Math.PI / 2;
+    const radius = 38;
+    return {
+      x: 50 + Math.cos(angle) * radius,
+      y: 50 + Math.sin(angle) * radius,
+    };
+  };
+  
+  const slotPositions = Array.from({ length: 10 }, (_, i) => getSlotPosition(i, 10));
+
+  return (
+    <div 
+      ref={canvasRef}
+      className="relative w-full h-full rounded-2xl overflow-hidden"
+      style={{
+        background: `
+          radial-gradient(ellipse at 50% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 60%),
+          radial-gradient(ellipse at 30% 30%, rgba(255, 215, 0, 0.05) 0%, transparent 40%),
+          linear-gradient(180deg, #0a0a10 0%, #050508 100%)
+        `,
+      }}
+    >
+      {/* 六边形网格背景 */}
+      <div className="absolute inset-0 hex-grid opacity-50" />
+      
+      {/* 竞技场背景装饰 */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        {/* 外圈 */}
+        <div className="absolute w-[90%] h-[90%] border border-luxury-purple/10 rounded-full" />
+        <div className="absolute w-[90%] h-[90%] border border-luxury-purple/5 rounded-full animate-spin-slow" style={{ animationDuration: '60s' }} />
+        
+        {/* 中圈 */}
+        <div className="absolute w-[70%] h-[70%] border border-luxury-cyan/10 rounded-full" />
+        <div className="absolute w-[70%] h-[70%] border border-luxury-cyan/5 rounded-full animate-spin-slow" style={{ animationDuration: '45s', animationDirection: 'reverse' }} />
+        
+        {/* 内圈 */}
+        <div className="absolute w-[45%] h-[45%] border border-luxury-gold/10 rounded-full" />
+        <div className="absolute w-[45%] h-[45%] border border-luxury-gold/5 rounded-full animate-spin-slow" style={{ animationDuration: '30s' }} />
+        
+        {/* 中心标志 */}
+        <div className="absolute w-24 h-24 rounded-full bg-gradient-to-br from-luxury-purple/10 to-luxury-cyan/10 border border-luxury-purple/20 flex items-center justify-center">
+          <Swords className="w-10 h-10 text-luxury-purple/30" />
+        </div>
+        
+        {/* 装饰线条 */}
+        {[0, 45, 90, 135].map(angle => (
+          <div 
+            key={angle}
+            className="absolute w-full h-px bg-gradient-to-r from-transparent via-luxury-purple/10 to-transparent"
+            style={{ transform: `rotate(${angle}deg)` }}
+          />
+        ))}
+      </div>
+      
+      {/* 坑位 */}
+      {slotPositions.map((pos, index) => {
+        const participant = participants[index];
+        const isSelected = selectedSlots.includes(index);
+        const isLit = phase === 'selecting' && isSelected;
+        const isAttacking = participant && attackingAgents.has(participant.id);
+        const isHurt = participant && hurtAgents.has(participant.id);
+        const isDead = participant && participant.hp <= 0;
+        
+        return (
+          <div
+            key={index}
+            className={`absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ${
+              isLit ? 'scale-110 z-10' : 'scale-100'
+            }`}
+            style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+          >
+            {/* 选中光环 */}
+            {isLit && (
+              <div className="absolute inset-0 w-20 h-20 -translate-x-2 -translate-y-2">
+                <div className="absolute inset-0 bg-luxury-gold/20 rounded-full animate-ping" />
+                <div className="absolute inset-2 bg-luxury-gold/10 rounded-full animate-pulse" />
+              </div>
+            )}
+            
+            {/* 坑位底座 */}
+            <div 
+              className={`relative w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                isLit 
+                  ? 'bg-luxury-gold/20 shadow-lg shadow-luxury-gold/30' 
+                  : 'bg-void-panel/80'
+              } ${
+                participant 
+                  ? 'border-2' 
+                  : 'border border-dashed border-white/10'
+              } ${
+                isDead ? 'opacity-40 grayscale' : ''
+              } ${
+                isHurt ? 'animate-shake' : ''
+              }`}
+              style={{ 
+                borderColor: participant?.color || 'rgba(255,255,255,0.1)',
+                boxShadow: participant && !isDead 
+                  ? `0 0 20px ${participant.color}30, inset 0 0 20px ${participant.color}10` 
+                  : 'none'
+              }}
+            >
+              {participant ? (
+                <PixelAgent 
+                  agent={participant} 
+                  size={40} 
+                  showHp={phase === 'fighting' || phase === 'settlement'}
+                  isAttacking={isAttacking}
+                  isHurt={isHurt}
+                />
+              ) : (
+                <span className="text-white/20 text-xl font-mono">{index + 1}</span>
+              )}
+              
+              {/* 死亡标记 */}
+              {isDead && (
+                <div className="absolute inset-0 flex items-center justify-center bg-void/60 rounded-2xl">
+                  <span className="text-2xl">💀</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Agent 名称 */}
+            {participant && (
+              <div className="absolute -bottom-7 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                <span 
+                  className="text-[10px] font-medium px-2 py-1 rounded-lg bg-void-panel/80 border border-white/5"
+                  style={{ 
+                    color: isDead ? '#666' : participant.color,
+                    textShadow: isDead ? 'none' : `0 0 10px ${participant.color}60`
+                  }}
+                >
+                  {participant.name.slice(0, 8)}
+                </span>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      
+      {/* 子弹特效 */}
+      {projectiles.map(p => {
+        const x = p.fromX + (p.toX - p.fromX) * p.progress;
+        const y = p.fromY + (p.toY - p.fromY) * p.progress;
+        return (
+          <div
+            key={p.id}
+            className="absolute pointer-events-none z-20"
+            style={{
+              left: `${x}%`,
+              top: `${y}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            {/* 子弹核心 */}
+            <div 
+              className="w-3 h-3 rounded-full"
+              style={{
+                backgroundColor: p.color,
+                boxShadow: `0 0 15px ${p.color}, 0 0 30px ${p.color}, 0 0 45px ${p.color}`,
+              }}
+            />
+            {/* 子弹尾迹 */}
+            <div 
+              className="absolute w-8 h-1.5 -left-8 top-1/2 -translate-y-1/2 rounded-full"
+              style={{
+                background: `linear-gradient(to right, transparent, ${p.color})`,
+                opacity: 0.7,
+              }}
+            />
+          </div>
+        );
+      })}
+      
+      {/* 伤害数字 */}
+      {damageNumbers.map(d => (
+        <div
+          key={d.id}
+          className="absolute damage-number font-bold pointer-events-none z-30"
+          style={{
+            left: `${d.x}%`,
+            top: `${d.y}%`,
+            color: d.isCrit ? '#f43f5e' : '#ffffff',
+            fontSize: d.isCrit ? '20px' : '16px',
+            textShadow: d.isCrit 
+              ? '0 0 20px #f43f5e, 0 0 40px #f43f5e' 
+              : '0 0 10px #000, 2px 2px 0 #000',
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          {d.isCrit && <span className="text-luxury-gold text-sm block text-center">暴击!</span>}
+          <span className="font-mono">-{d.damage}</span>
+        </div>
+      ))}
+      
+      {/* 爆炸效果 */}
+      {explosions.map(e => (
+        <div
+          key={e.id}
+          className="absolute pointer-events-none z-20"
+          style={{
+            left: `${e.x}%`,
+            top: `${e.y}%`,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <div className="explosion w-24 h-24 rounded-full bg-gradient-radial from-luxury-gold via-luxury-amber to-transparent opacity-90" />
+          <div className="absolute inset-0 flex items-center justify-center text-3xl animate-ping">
+            💥
+          </div>
+        </div>
+      ))}
+      
+      {/* 倒计时显示 */}
+      {(phase === 'countdown' || phase === 'selecting') && countdown > 0 && (
+        <div className="absolute inset-0 flex items-center justify-center bg-void/80 backdrop-blur-sm z-40">
+          <div className="text-center">
+            <div 
+              className="text-9xl font-bold text-gradient font-display animate-pulse"
+              style={{ 
+                textShadow: '0 0 40px rgba(139, 92, 246, 0.5), 0 0 80px rgba(139, 92, 246, 0.3)',
+                animation: 'pulse-glow 1s ease-in-out infinite'
+              }}
+            >
+              {countdown}
+            </div>
+            <div className="text-lg text-white/60 mt-6 font-medium tracking-wide">
+              {phase === 'selecting' ? '正在选择参赛者...' : '战斗即将开始'}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 等待状态 */}
+      {phase === 'waiting' && (
+        <div className="absolute inset-0 flex items-center justify-center z-30">
+          <div className="text-center">
+            <div className="w-20 h-20 rounded-2xl bg-void-panel/80 border border-luxury-purple/20 flex items-center justify-center mb-4 mx-auto">
+              <div className="w-3 h-3 bg-luxury-purple rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-3 h-3 bg-luxury-cyan rounded-full animate-bounce mx-2" style={{ animationDelay: '150ms' }} />
+              <div className="w-3 h-3 bg-luxury-gold rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+            <p className="text-xl text-white/60 font-medium">等待下一轮</p>
+          </div>
+        </div>
+      )}
+      
+      {/* 战斗中状态指示器 */}
+      {phase === 'fighting' && (
+        <>
+          {/* 存活人数 */}
+          <div className="absolute top-5 left-5 glass rounded-xl px-4 py-2 border border-luxury-rose/20 z-20">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-luxury-rose" />
+              <span className="text-sm text-white/60">存活</span>
+              <span className="text-lg font-bold text-luxury-rose font-mono">
+                {participants.filter(p => p.hp > 0).length}
+              </span>
+              <span className="text-white/30">/</span>
+              <span className="text-white/40">{participants.length}</span>
+            </div>
+          </div>
+          
+          {/* 战斗倒计时 */}
+          <div className="absolute top-5 right-5 glass rounded-xl px-4 py-2 border border-luxury-cyan/20 z-20">
+            <div className="flex items-center gap-2">
+              <Timer className="w-4 h-4 text-luxury-cyan animate-pulse" />
+              <span className="text-lg font-bold text-luxury-cyan font-mono">{countdown}s</span>
+            </div>
+          </div>
+        </>
+      )}
+      
+      {/* 轮次信息 */}
+      <div className="absolute bottom-5 right-5 z-20">
+        <div className="glass rounded-xl px-4 py-3 border border-white/5">
+          <div className="flex items-center gap-3">
+            <Trophy className="w-5 h-5 text-luxury-gold" />
+            <div>
+              <p className="text-[10px] text-white/40 uppercase tracking-wider">Round</p>
+              <p className="text-2xl font-bold text-gradient font-display">{roundNumber || 1}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ArenaCanvas;

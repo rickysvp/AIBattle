@@ -1,0 +1,417 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* 奢华主题色彩 */
+  --void: #050508;
+  --void-light: #0a0a10;
+  --void-panel: #12121a;
+  --void-elevated: #1a1a25;
+  --void-border: #2a2a3a;
+  
+  --luxury-gold: #ffd700;
+  --luxury-gold-light: #ffec8b;
+  --luxury-gold-dark: #b8860b;
+  --luxury-purple: #8b5cf6;
+  --luxury-purple-light: #a78bfa;
+  --luxury-cyan: #06b6d4;
+  --luxury-rose: #f43f5e;
+  
+  /* 渐变 */
+  --gradient-luxury: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #06b6d4 100%);
+  --gradient-gold: linear-gradient(135deg, #ffd700 0%, #ffec8b 50%, #b8860b 100%);
+  --gradient-dark: linear-gradient(180deg, #0a0a10 0%, #050508 100%);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Orbitron', sans-serif;
+  background: var(--void);
+  background-image: 
+    radial-gradient(ellipse at 20% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(255, 215, 0, 0.05) 0%, transparent 70%);
+  background-attachment: fixed;
+  color: #ffffff;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--void-panel);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--luxury-purple), var(--luxury-cyan));
+  border-radius: 4px;
+  border: 2px solid var(--void-panel);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--luxury-purple-light), var(--luxury-cyan));
+}
+
+/* 字体类 */
+.font-display {
+  font-family: 'Orbitron', sans-serif;
+}
+
+.font-pixel {
+  font-family: 'Press Start 2P', cursive;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* 奢华玻璃态效果 */
+.glass {
+  background: rgba(18, 18, 26, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-strong {
+  background: rgba(18, 18, 26, 0.85);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 霓虹发光文字 */
+.text-glow-gold {
+  text-shadow: 
+    0 0 10px rgba(255, 215, 0, 0.8),
+    0 0 20px rgba(255, 215, 0, 0.5),
+    0 0 30px rgba(255, 215, 0, 0.3);
+}
+
+.text-glow-purple {
+  text-shadow: 
+    0 0 10px rgba(139, 92, 246, 0.8),
+    0 0 20px rgba(139, 92, 246, 0.5),
+    0 0 30px rgba(139, 92, 246, 0.3);
+}
+
+.text-glow-cyan {
+  text-shadow: 
+    0 0 10px rgba(6, 182, 212, 0.8),
+    0 0 20px rgba(6, 182, 212, 0.5),
+    0 0 30px rgba(6, 182, 212, 0.3);
+}
+
+/* 渐变文字 */
+.text-gradient {
+  background: var(--gradient-luxury);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-gold {
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 奢华按钮样式 */
+.btn-luxury {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(6, 182, 212, 0.2));
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  transition: all 0.3s ease;
+}
+
+.btn-luxury::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.btn-luxury:hover::before {
+  left: 100%;
+}
+
+.btn-luxury:hover {
+  border-color: rgba(139, 92, 246, 0.8);
+  box-shadow: 
+    0 0 20px rgba(139, 92, 246, 0.4),
+    0 0 40px rgba(139, 92, 246, 0.2);
+  transform: translateY(-2px);
+}
+
+/* 金色按钮 */
+.btn-gold {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 236, 139, 0.1));
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+.btn-gold:hover {
+  border-color: rgba(255, 215, 0, 0.8);
+  box-shadow: 
+    0 0 20px rgba(255, 215, 0, 0.4),
+    0 0 40px rgba(255, 215, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+/* 卡片悬停效果 */
+.card-luxury {
+  background: rgba(18, 18, 26, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-luxury:hover {
+  background: rgba(26, 26, 37, 0.8);
+  border-color: rgba(139, 92, 246, 0.3);
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(139, 92, 246, 0.15);
+  transform: translateY(-4px);
+}
+
+/* 边框流光效果 */
+.border-glow {
+  position: relative;
+}
+
+.border-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(90deg, #8b5cf6, #06b6d4, #ffd700, #8b5cf6);
+  background-size: 300% 100%;
+  border-radius: inherit;
+  z-index: -1;
+  animation: border-flow 3s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.border-glow:hover::before {
+  opacity: 1;
+}
+
+/* 脉冲光环 */
+.pulse-ring {
+  position: relative;
+}
+
+.pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg, transparent, var(--luxury-purple), transparent);
+  animation: spin 4s linear infinite;
+  z-index: -1;
+  opacity: 0.5;
+}
+
+/* 伤害数字动画 */
+@keyframes damage-float {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(-50%, -80%) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -150%) scale(1);
+    opacity: 0;
+  }
+}
+
+.damage-number {
+  animation: damage-float 1.2s ease-out forwards;
+  pointer-events: none;
+}
+
+/* 爆炸效果 */
+@keyframes explosion {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+.explosion {
+  animation: explosion 0.6s ease-out forwards;
+}
+
+/* 抖动效果 */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+  20%, 40%, 60%, 80% { transform: translateX(3px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+/* 攻击动画 */
+@keyframes attack-lunge {
+  0%, 100% { transform: translateX(0) scale(1); }
+  50% { transform: translateX(15px) scale(1.1); }
+}
+
+.animate-attack {
+  animation: attack-lunge 0.3s ease-in-out;
+}
+
+/* 受伤闪烁 */
+@keyframes hurt-flash {
+  0%, 100% { filter: brightness(1); }
+  25% { filter: brightness(2) saturate(0.3) hue-rotate(-30deg); }
+  75% { filter: brightness(1.5) saturate(0.5); }
+}
+
+.animate-hurt {
+  animation: hurt-flash 0.3s ease-in-out;
+}
+
+/* 网格背景 */
+.grid-bg {
+  background-image: 
+    linear-gradient(rgba(139, 92, 246, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* 六边形网格 */
+.hex-grid {
+  background-color: var(--void);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%238b5cf6' fill-opacity='0.03'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-7.5L27.99 34H28v2.31h-.01L17 42.65V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* 输入框样式 */
+input, textarea {
+  background: rgba(10, 10, 16, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--luxury-purple);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+}
+
+input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* 数字输入框去除箭头 */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* 选中效果 */
+.selected-luxury {
+  box-shadow: 
+    0 0 0 2px var(--luxury-gold),
+    0 0 20px rgba(255, 215, 0, 0.5),
+    0 0 40px rgba(255, 215, 0, 0.2);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .font-pixel {
+    font-size: 0.6rem;
+  }
+  
+  .card-luxury:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* 粒子效果背景 */
+.particles-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: rgba(139, 92, 246, 0.5);
+  border-radius: 50%;
+  animation: float-particle 20s infinite;
+}
+
+@keyframes float-particle {
+  0%, 100% {
+    transform: translateY(100vh) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
