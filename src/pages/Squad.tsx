@@ -16,7 +16,9 @@ import {
   CheckSquare,
   Square,
   LogIn,
-  ArrowRight
+  ArrowRight,
+  BatteryCharging,
+  Rocket
 } from 'lucide-react';
 
 const Squad: React.FC = () => {
@@ -100,7 +102,7 @@ const Squad: React.FC = () => {
     alert(`成功为 ${selectedAgents.size} 个 Agent 充值 ${amount}`);
   };
   
-  // 一键加入竞技场
+  // 一键加入竞技场（选中）
   const handleBatchJoinArena = () => {
     const eligibleAgents = myAgents.filter(
       a => a.status === 'idle' && a.balance > 0 && !selectedAgents.has(a.id)
@@ -122,6 +124,51 @@ const Squad: React.FC = () => {
     
     setSelectedAgents(new Set());
     alert(`成功将 ${agentsToJoin.length} 个 Agent 加入竞技场`);
+  };
+
+  // 一键充值所有空闲 Agents
+  const handleRechargeAll = () => {
+    if (idleAgents.length === 0) {
+      alert('没有空闲的 Agent');
+      return;
+    }
+    
+    const amount = parseFloat(batchAmount);
+    if (!amount || amount <= 0) {
+      alert('请输入有效的充值金额');
+      return;
+    }
+    
+    const totalNeeded = amount * idleAgents.length;
+    if (totalNeeded > wallet.balance) {
+      alert(`余额不足，需要 ${totalNeeded}，当前余额 ${wallet.balance}`);
+      return;
+    }
+    
+    idleAgents.forEach(agent => {
+      allocateFunds(agent.id, amount);
+    });
+    
+    setBatchAmount('');
+    alert(`成功为所有 ${idleAgents.length} 个空闲 Agent 充值 ${amount}`);
+  };
+
+  // 一键让所有 Agents 加入竞技场
+  const handleJoinAllArena = () => {
+    const eligibleAgents = myAgents.filter(
+      a => a.status === 'idle' && a.balance > 0
+    );
+    
+    if (eligibleAgents.length === 0) {
+      alert('没有符合条件的 Agent（需要有余额且处于空闲状态）');
+      return;
+    }
+    
+    eligibleAgents.forEach(agent => {
+      joinArena(agent.id);
+    });
+    
+    alert(`成功将 ${eligibleAgents.length} 个 Agent 加入竞技场`);
   };
   
   const filteredAgents = myAgents.filter(agent => {
@@ -237,65 +284,113 @@ const Squad: React.FC = () => {
                 </div>
                 
                 {showBatchPanel && (
-                  <div className="p-6 space-y-4">
-                    {/* 选择状态 */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={toggleSelectAll}
-                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-void-light border border-white/10 text-white/60 hover:text-white transition-colors"
-                        >
-                          {selectedAgents.size === idleAgents.length && idleAgents.length > 0 ? (
-                            <CheckSquare className="w-4 h-4 text-luxury-green" />
-                          ) : (
-                            <Square className="w-4 h-4" />
-                          )}
-                          <span className="text-sm">
-                            全选空闲 ({selectedAgents.size}/{idleAgents.length})
-                          </span>
-                        </button>
-                      </div>
-                      
-                      {/* 一键加入竞技场 */}
-                      <button
-                        onClick={handleBatchJoinArena}
-                        disabled={canJoinArena.length === 0}
-                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-luxury-gold/10 border border-luxury-gold/30 text-luxury-gold hover:bg-luxury-gold/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <LogIn className="w-4 h-4" />
-                        <span className="text-sm font-medium">一键加入竞技场</span>
-                        <span className="text-xs bg-luxury-gold/20 px-2 py-0.5 rounded-full">
-                          {canJoinArena.length}
-                        </span>
-                      </button>
-                    </div>
-                    
-                    {/* 批量充值 */}
-                    {selectedAgents.size > 0 && (
-                      <div className="flex items-center gap-3 p-4 bg-void-light/50 rounded-xl border border-white/5 animate-slide-up">
-                        <div className="flex items-center gap-2 text-white/60">
-                          <Coins className="w-4 h-4" />
-                          <span className="text-sm">为选中的 {selectedAgents.size} 个 Agent 充值:</span>
+                  <div className="p-6 space-y-6">
+                    {/* 一键操作区域 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* 一键充值所有 */}
+                      <div className="p-4 bg-luxury-green/5 rounded-xl border border-luxury-green/20">
+                        <div className="flex items-center gap-2 mb-3">
+                          <BatteryCharging className="w-5 h-5 text-luxury-green" />
+                          <span className="text-sm font-medium text-white">一键充值所有</span>
                         </div>
-                        <div className="flex-1 relative">
+                        <div className="flex items-center gap-2">
                           <input
                             type="number"
                             value={batchAmount}
                             onChange={(e) => setBatchAmount(e.target.value)}
                             placeholder="金额"
-                            className="w-32 bg-void-light border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-luxury-cyan focus:outline-none"
+                            className="flex-1 bg-void-light border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-luxury-green focus:outline-none"
                           />
+                          <button
+                            onClick={handleRechargeAll}
+                            disabled={!batchAmount || parseFloat(batchAmount) <= 0 || idleAgents.length === 0}
+                            className="px-4 py-2 rounded-lg bg-luxury-green/20 border border-luxury-green/40 text-luxury-green hover:bg-luxury-green/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap"
+                          >
+                            充值全部 ({idleAgents.length})
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 一键加入竞技场 */}
+                      <div className="p-4 bg-luxury-gold/5 rounded-xl border border-luxury-gold/20">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Rocket className="w-5 h-5 text-luxury-gold" />
+                          <span className="text-sm font-medium text-white">一键加入竞技场</span>
                         </div>
                         <button
-                          onClick={handleBatchRecharge}
-                          disabled={!batchAmount || parseFloat(batchAmount) <= 0}
-                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-luxury-green/10 border border-luxury-green/30 text-luxury-green hover:bg-luxury-green/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          onClick={handleJoinAllArena}
+                          disabled={canJoinArena.length === 0}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-luxury-gold/20 border border-luxury-gold/40 text-luxury-gold hover:bg-luxury-gold/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                         >
-                          <ArrowRight className="w-4 h-4" />
-                          确认充值
+                          <LogIn className="w-4 h-4" />
+                          全部加入 ({canJoinArena.length})
                         </button>
                       </div>
-                    )}
+                    </div>
+
+                    {/* 分隔线 */}
+                    <div className="h-px bg-white/10" />
+
+                    {/* 选择操作区域 */}
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={toggleSelectAll}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-void-light border border-white/10 text-white/60 hover:text-white transition-colors"
+                          >
+                            {selectedAgents.size === idleAgents.length && idleAgents.length > 0 ? (
+                              <CheckSquare className="w-4 h-4 text-luxury-cyan" />
+                            ) : (
+                              <Square className="w-4 h-4" />
+                            )}
+                            <span className="text-sm">
+                              全选空闲 ({selectedAgents.size}/{idleAgents.length})
+                            </span>
+                          </button>
+                        </div>
+                        
+                        {/* 选中加入竞技场 */}
+                        <button
+                          onClick={handleBatchJoinArena}
+                          disabled={selectedAgents.size === 0}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-luxury-cyan/10 border border-luxury-cyan/30 text-luxury-cyan hover:bg-luxury-cyan/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <LogIn className="w-4 h-4" />
+                          <span className="text-sm font-medium">加入竞技场</span>
+                          <span className="text-xs bg-luxury-cyan/20 px-2 py-0.5 rounded-full">
+                            {selectedAgents.size}
+                          </span>
+                        </button>
+                      </div>
+                      
+                      {/* 批量充值（选中） */}
+                      {selectedAgents.size > 0 && (
+                        <div className="flex items-center gap-3 p-4 bg-void-light/50 rounded-xl border border-white/5 animate-slide-up">
+                          <div className="flex items-center gap-2 text-white/60">
+                            <Coins className="w-4 h-4" />
+                            <span className="text-sm">为选中的 {selectedAgents.size} 个 Agent 充值:</span>
+                          </div>
+                          <div className="flex-1 relative">
+                            <input
+                              type="number"
+                              value={batchAmount}
+                              onChange={(e) => setBatchAmount(e.target.value)}
+                              placeholder="金额"
+                              className="w-32 bg-void-light border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-luxury-cyan focus:outline-none"
+                            />
+                          </div>
+                          <button
+                            onClick={handleBatchRecharge}
+                            disabled={!batchAmount || parseFloat(batchAmount) <= 0}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-luxury-cyan/10 border border-luxury-cyan/30 text-luxury-cyan hover:bg-luxury-cyan/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <ArrowRight className="w-4 h-4" />
+                            确认充值
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
