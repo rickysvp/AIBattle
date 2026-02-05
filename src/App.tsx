@@ -7,6 +7,8 @@ import Tournament from './pages/Tournament';
 import Squad from './pages/Squad';
 import Wallet from './pages/Wallet';
 import Leaderboard from './pages/Leaderboard';
+import LiquidityMining from './pages/LiquidityMining';
+import PredictionMarket from './pages/PredictionMarket';
 
 const App: React.FC = () => {
   return (
@@ -16,6 +18,8 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<Arena />} />
           <Route path="/arena" element={<Arena />} />
+          <Route path="/earn" element={<LiquidityMining />} />
+          <Route path="/predict" element={<PredictionMarket />} />
           <Route path="/tournament" element={<Tournament />} />
           <Route path="/squad" element={<Squad />} />
           <Route path="/wallet" element={<Wallet />} />

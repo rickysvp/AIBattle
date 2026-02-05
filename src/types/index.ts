@@ -108,3 +108,67 @@ export interface BalanceChange {
   isGain: boolean;
   timestamp: number;
 }
+
+// ==================== 流动性挖矿类型 ====================
+
+// 用户质押记录
+export interface LiquidityStake {
+  id: string;
+  userId: string;
+  amount: number;
+  stakedAt: number;
+  rewards: number;
+  unlockTime: number;
+  lastClaimTime: number;
+}
+
+// 流动性池
+export interface LiquidityPool {
+  totalStaked: number;
+  totalRewards: number;
+  apr: number;
+  rewardRate: number;
+  stakerCount: number;
+}
+
+// ==================== 预测市场类型 ====================
+
+// 预测下注
+export interface PredictionBet {
+  id: string;
+  userId: string;
+  marketId: string;
+  tournamentId: string;
+  predictedAgentId: string;
+  betAmount: number;
+  betType: 'semifinal' | 'final' | 'match';
+  odds: number;
+  status: 'pending' | 'won' | 'lost';
+  potentialWin: number;
+  createdAt: number;
+}
+
+// 预测市场
+export interface PredictionMarket {
+  id: string;
+  tournamentId: string;
+  matchId?: string;
+  name: string;
+  totalPool: number;
+  odds: Record<string, number>;
+  status: 'open' | 'closed' | 'settled';
+  deadline: number;
+  betType: 'semifinal' | 'final' | 'match';
+  participants: string[];
+}
+
+// 自动下注规则
+export interface AutoBetRule {
+  enabled: boolean;
+  betAmount: number;
+  strategy: 'always' | 'top_ranked' | 'specified';
+  maxBetsPerDay: number;
+  specifiedAgentIds?: string[];
+  minOdds?: number;
+  maxOdds?: number;
+}
