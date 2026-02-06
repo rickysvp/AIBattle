@@ -42,14 +42,34 @@ const Header: React.FC = () => {
         <div className="max-w-screen-xl mx-auto px-4 h-20 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-6">
-          <h1 className="flex items-baseline font-bold font-display tracking-wider">
+          <h1 className="relative flex items-baseline font-bold font-display tracking-wider">
             <span className="text-3xl text-white">AI</span>
             <span className="text-3xl text-gradient">brawl</span>
-            <span className="relative ml-0.5 text-lg font-medium">
+            <span className="relative ml-0.5 text-lg font-medium z-10">
               <span className="text-luxury-cyan">.</span>
               <span className="bg-gradient-to-r from-luxury-purple via-luxury-cyan to-luxury-gold bg-clip-text text-transparent">fun</span>
-              <span className="absolute -bottom-0.5 left-0 right-0 h-px bg-gradient-to-r from-luxury-purple/50 via-luxury-cyan to-luxury-gold/50"></span>
             </span>
+            {/* 圆角地图装饰 - 盖在 awl 字母上面 */}
+            <div className="absolute -bottom-1 left-8 right-6 h-4 rounded-lg overflow-hidden opacity-80">
+              <svg viewBox="0 0 120 20" className="w-full h-full" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="mapGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.6" />
+                    <stop offset="50%" stopColor="#06b6d4" stopOpacity="0.8" />
+                    <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.6" />
+                  </linearGradient>
+                </defs>
+                {/* 地图网格线 */}
+                <path d="M0,10 Q15,5 30,10 T60,10 T90,10 T120,10" fill="none" stroke="url(#mapGradient)" strokeWidth="0.5" opacity="0.5" />
+                <path d="M0,15 Q20,8 40,15 T80,15 T120,15" fill="none" stroke="url(#mapGradient)" strokeWidth="0.5" opacity="0.3" />
+                <path d="M10,0 Q25,12 40,5 T70,8 T100,3" fill="none" stroke="url(#mapGradient)" strokeWidth="0.5" opacity="0.4" />
+                {/* 地图点标记 */}
+                <circle cx="20" cy="8" r="1.5" fill="#06b6d4" opacity="0.8" />
+                <circle cx="50" cy="12" r="1.5" fill="#f59e0b" opacity="0.8" />
+                <circle cx="80" cy="6" r="1.5" fill="#8b5cf6" opacity="0.8" />
+                <circle cx="105" cy="10" r="1.5" fill="#06b6d4" opacity="0.8" />
+              </svg>
+            </div>
           </h1>
           {/* 平台统计 */}
           <div className="hidden md:flex items-center gap-1 glass rounded-xl px-4 py-2 border border-white/5">

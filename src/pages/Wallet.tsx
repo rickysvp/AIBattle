@@ -169,7 +169,7 @@ const WalletPage: React.FC = () => {
 
   // 邀请码和邀请链接
   const inviteCode = 'AI2024VIP';
-  const inviteLink = `https://aibattlex.vercel.app?ref=${inviteCode}`;
+  const inviteLink = `https://aibrawl.fun?ref=${inviteCode}`;
 
   // 复制邀请链接
   const copyInviteLink = () => {

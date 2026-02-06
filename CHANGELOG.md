@@ -3,7 +3,17 @@
 ## 访问链接
 
 - **本地开发环境**: http://localhost:5174/
-- **线上生产环境**: https://aibattlex.vercel.app
+- **线上生产环境**: https://aibrawl.fun
+
+---
+
+## [1.8.17] - 2026-02-06
+
+### 优化
+- 线上生产环境链接替换为 https://aibrawl.fun
+- Header LOGO 重新设计，.fun 下方添加圆角地图装饰
+- 地图使用 SVG 绘制，包含渐变网格线和点标记
+- 邀请链接同步更新为新域名
 
 ---
 
