@@ -566,12 +566,7 @@ const Arena: React.FC = () => {
               {/* 标题栏 + 铸造按钮 */}
               <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-luxury-cyan/20 to-luxury-purple/20 border border-luxury-cyan/30 flex items-center justify-center">
-                    <Zap className="w-5 h-5 text-luxury-cyan" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-white">{t('squad.title')}</h2>
-                  </div>
+                  <h2 className="text-lg font-semibold text-white">{t('squad.title')}</h2>
                 </div>
                 {/* 铸造按钮移到标题右侧 */}
                 {wallet.connected && myAgents.length < 30 && (
@@ -638,10 +633,18 @@ const Arena: React.FC = () => {
                     <p className="text-xs text-white/20 mt-3">{t('squad.mint')} 100 $MON</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-2">
+                    {/* 表头 */}
+                    <div className="flex items-center gap-2 px-2 py-1 text-[10px] text-white/40 uppercase tracking-wider border-b border-white/5">
+                      <div className="w-8 flex-shrink-0"></div>
+                      <div className="w-20 flex-shrink-0">{t('squad.name')}</div>
+                      <div className="w-14 flex-shrink-0 text-right">{t('squad.balance')}</div>
+                      <div className="w-14 flex-shrink-0 text-right">{t('squad.profit')}</div>
+                      <div className="flex-1 text-right">{t('squad.actions')}</div>
+                    </div>
                     {/* 所有 Agents 列表 - 最多显示30个 */}
                     {sortedAgents.slice(0, 30).map(agent => (
-                      <AgentCard key={agent.id} agent={agent} compact />
+                      <AgentCard key={agent.id} agent={agent} viewMode="list" />
                     ))}
                     {myAgents.length > 30 && (
                       <p className="text-xs text-white/30 text-center py-2">

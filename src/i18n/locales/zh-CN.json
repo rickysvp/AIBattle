@@ -67,6 +67,7 @@
     "level": "等级",
     "exp": "经验",
     "power": "战力",
+    "name": "名称",
     "balance": "余额",
     "status": "状态",
     "actions": "操作",
@@ -98,6 +99,7 @@
     "totalBalance": "总余额",
     "totalProfit": "总利润",
     "avgWinRate": "平均胜率",
+    "winRate": "胜率",
     "quickMint": "快速铸造",
     "mintCost": "铸造费用",
     "minting": "铸造中",
@@ -107,7 +109,12 @@
     "count": "个",
     "noFilteredAgents": "没有符合条件的 Agent",
     "tryOtherFilter": "尝试其他筛选条件",
-    "hidden": "未显示"
+    "hidden": "未显示",
+    "sortBy": "排序",
+    "sortBalance": "余额",
+    "sortWinRate": "胜率",
+    "sortProfit": "收益",
+    "profit": "盈亏"
   },
   "battleLog": {
     "noLogs": "暂无战斗记录",

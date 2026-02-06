@@ -18,7 +18,8 @@ import {
   Square,
   BatteryCharging,
   Rocket,
-  Lock
+  Lock,
+  Target
 } from 'lucide-react';
 
 const Squad: React.FC = () => {
@@ -42,6 +43,7 @@ const Squad: React.FC = () => {
   const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set());
   const [batchAmount, setBatchAmount] = useState('');
   const [showBatchPanel, setShowBatchPanel] = useState(false);
+  const [sortBy, setSortBy] = useState<'balance' | 'profit' | 'winRate' | 'status'>('balance');
   
   const handleMint = async () => {
     if (!wallet.connected || wallet.balance < mintCost * mintCount) return;
@@ -182,10 +184,30 @@ const Squad: React.FC = () => {
     alert(`${t('squad.joinSuccess')} ${eligibleAgents.length} ${t('squad.agents')} ${t('arena.title')}`);
   };
   
-  const filteredAgents = myAgents.filter(agent => {
-    if (filter === 'all') return true;
-    return agent.status === filter;
-  });
+  const filteredAgents = myAgents
+    .filter(agent => {
+      if (filter === 'all') return true;
+      return agent.status === filter;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'balance':
+          return b.balance - a.balance;
+        case 'profit':
+          return b.netProfit - a.netProfit;
+        case 'winRate': {
+          const winRateA = a.totalBattles > 0 ? a.wins / a.totalBattles : 0;
+          const winRateB = b.totalBattles > 0 ? b.wins / b.totalBattles : 0;
+          return winRateB - winRateA;
+        }
+        case 'status': {
+          const statusOrder = { idle: 0, in_arena: 1, fighting: 2, dead: 3 };
+          return statusOrder[a.status] - statusOrder[b.status];
+        }
+        default:
+          return 0;
+      }
+    });
   
   const idleAgents = myAgents.filter(a => a.status === 'idle');
   const canJoinArena = idleAgents.filter(a => a.balance > 0);
@@ -282,24 +304,21 @@ const Squad: React.FC = () => {
         {/* 快速铸造区 */}
         <div className="card-luxury rounded-2xl overflow-hidden mb-8 border-luxury-purple/20">
           <div className="px-6 py-5 border-b border-white/5 bg-gradient-to-r from-luxury-purple/10 to-transparent">
-            <div className="flex items-center gap-3">
-              <Sparkles className="w-6 h-6 text-luxury-purple" />
-              <div>
-                <h2 className="text-lg font-semibold text-white">{t('squad.quickMint')}</h2>
-                <p className="text-xs text-white/40">{t('squad.mintCost')}: <span className="text-luxury-gold">{mintCost}</span> / {t('squad.each')}</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-6 h-6 text-luxury-purple" />
+                <div>
+                  <h2 className="text-lg font-semibold text-white">{t('squad.quickMint')}</h2>
+                  <p className="text-xs text-white/40">{t('squad.mintCost')}: <span className="text-luxury-gold">{mintCost} $MON</span> / {t('squad.each')}</p>
+                </div>
               </div>
-            </div>
-          </div>
-
-          <div className="p-6">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   {[1, 5, 10].map(count => (
                     <button
                       key={count}
                       onClick={() => setMintCount(count)}
-                      className={`px-5 py-2.5 rounded-xl font-medium transition-all ${
+                      className={`px-4 py-2 rounded-lg font-medium transition-all ${
                         mintCount === count
                           ? 'bg-luxury-purple text-white shadow-lg shadow-luxury-purple/25'
                           : 'bg-void-light text-white/60 hover:text-white border border-white/10'
@@ -309,61 +328,92 @@ const Squad: React.FC = () => {
                     </button>
                   ))}
                 </div>
+                
+                <button
+                  onClick={handleMint}
+                  disabled={isMinting || wallet.balance < mintCost * mintCount}
+                  className="group relative px-6 py-2.5 rounded-lg overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-luxury-purple via-luxury-purple-light to-luxury-cyan" />
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+
+                  <span className="relative flex items-center gap-2 text-white font-semibold text-sm">
+                    {isMinting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        {t('squad.minting')}...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4" />
+                        {t('squad.mint')} ({mintCost * mintCount} $MON)
+                      </>
+                    )}
+                  </span>
+                </button>
               </div>
-              
-              <button
-                onClick={handleMint}
-                disabled={isMinting || wallet.balance < mintCost * mintCount}
-                className="group relative px-8 py-3.5 rounded-xl overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-luxury-purple via-luxury-purple-light to-luxury-cyan" />
-                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-
-                <span className="relative flex items-center gap-2 text-white font-semibold">
-                  {isMinting ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      {t('squad.minting')}...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-5 h-5" />
-                      {t('squad.mint')} ({mintCost * mintCount})
-                    </>
-                  )}
-                </span>
-              </button>
             </div>
-
           </div>
         </div>
 
-        {/* 筛选器 & 批量操作 */}
+        {/* 筛选器 & 排序 & 批量操作 */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-white/40">
-              <Filter className="w-4 h-4" />
-              <span className="text-sm">{t('arena.filter')}</span>
+          <div className="flex items-center gap-6">
+            {/* 状态筛选 */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-white/40">
+                <Filter className="w-4 h-4" />
+                <span className="text-sm">{t('arena.filter')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {(['all', 'idle', 'in_arena', 'fighting'] as const).map(key => {
+                  const config = getFilterConfig(key);
+                  const Icon = config.icon;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setFilter(key)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        filter === key
+                          ? `${config.color} text-white shadow-lg`
+                          : 'bg-void-light text-white/60 hover:text-white border border-white/10'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      {config.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              {(['all', 'idle', 'in_arena', 'fighting'] as const).map(key => {
-                const config = getFilterConfig(key);
-                const Icon = config.icon;
-                return (
+
+            {/* 排序 */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-white/40">
+                <TrendingUp className="w-4 h-4" />
+                <span className="text-sm">{t('squad.sortBy')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {([
+                  { key: 'balance', label: t('squad.balance'), icon: Wallet },
+                  { key: 'profit', label: t('squad.profit'), icon: TrendingUp },
+                  { key: 'winRate', label: t('squad.winRate'), icon: Target },
+                  { key: 'status', label: t('squad.status'), icon: Zap }
+                ] as const).map(({ key, label, icon: Icon }) => (
                   <button
                     key={key}
-                    onClick={() => setFilter(key)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                      filter === key
-                        ? `${config.color} text-white shadow-lg`
+                    onClick={() => setSortBy(key as typeof sortBy)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      sortBy === key
+                        ? 'bg-luxury-cyan/20 text-luxury-cyan border border-luxury-cyan/30'
                         : 'bg-void-light text-white/60 hover:text-white border border-white/10'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
-                    {config.label}
+                    <Icon className="w-3.5 h-3.5" />
+                    {label}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
           </div>
 
@@ -517,16 +567,12 @@ const Squad: React.FC = () => {
 
         {/* Agents 列表 - 表头 */}
         {filteredAgents.length > 0 && (
-          <div className="hidden md:flex items-center gap-4 px-3 py-2 text-xs text-white/40 uppercase tracking-wider border-b border-white/5 mb-2">
-            <div className="w-12 flex-shrink-0"></div>
+          <div className="hidden md:flex items-center gap-2 px-3 py-2 text-xs text-white/40 uppercase tracking-wider border-b border-white/5 mb-2">
+            <div className="w-8 flex-shrink-0"></div>
             <div className="w-32 flex-shrink-0">{t('squad.name')}</div>
-            <div className="w-20 flex-shrink-0">{t('squad.status')}</div>
-            <div className="w-24 flex-shrink-0">{t('wallet.balance')}</div>
-            <div className="w-24 flex-shrink-0">{t('squad.profit')}</div>
-            <div className="w-20 flex-shrink-0">{t('squad.battles')}</div>
-            <div className="w-20 flex-shrink-0">{t('squad.winRate')}</div>
+            <div className="w-24 flex-shrink-0 text-right">{t('wallet.balance')}</div>
+            <div className="w-24 flex-shrink-0 text-right">{t('squad.profit')}</div>
             <div className="flex-1 text-right">{t('squad.actions')}</div>
-            <div className="w-4 flex-shrink-0"></div>
           </div>
         )}
 

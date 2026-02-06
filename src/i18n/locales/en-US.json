@@ -67,6 +67,7 @@
     "level": "Level",
     "exp": "EXP",
     "power": "Power",
+    "name": "Name",
     "balance": "Balance",
     "status": "Status",
     "actions": "Actions",
@@ -98,6 +99,7 @@
     "totalBalance": "Total Balance",
     "totalProfit": "Total Profit",
     "avgWinRate": "Avg Win Rate",
+    "winRate": "Win Rate",
     "quickMint": "Quick Mint",
     "mintCost": "Mint Cost",
     "minting": "Minting",
@@ -107,7 +109,12 @@
     "count": "",
     "noFilteredAgents": "No matching Agents",
     "tryOtherFilter": "Try other filters",
-    "hidden": "hidden"
+    "hidden": "hidden",
+    "sortBy": "Sort by",
+    "sortBalance": "Balance",
+    "sortWinRate": "Win Rate",
+    "sortProfit": "Profit",
+    "profit": "P/L"
   },
   "battleLog": {
     "noLogs": "No battle logs",

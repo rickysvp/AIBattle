@@ -195,7 +195,7 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
     return (
       <>
         <div 
-          className="flex items-center gap-4 p-3 bg-void-light/30 rounded-xl border border-white/5 hover:border-white/10 transition-all cursor-pointer group"
+          className="flex items-center gap-2 p-2 bg-void-light/30 rounded-xl border border-white/5 hover:border-white/10 transition-all cursor-pointer group"
           onClick={() => setIsDetailOpen(true)}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
@@ -210,30 +210,23 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
               }}
             />
             <div 
-              className="relative w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden"
+              className="relative w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden"
               style={{ 
                 background: `linear-gradient(135deg, ${rarity.color}20, ${rarity.color}40)`,
-                border: `2px solid ${rarity.color}`
+                border: `1.5px solid ${rarity.color}`
               }}
             >
-              <PixelAgent agent={agent} size={36} />
-            </div>
-            {/* 稀有度指示器 */}
-            <div 
-              className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: rarity.color }}
-            >
-              <RarityIcon className="w-2.5 h-2.5 text-white" />
+              <PixelAgent agent={agent} size={24} />
             </div>
           </div>
           
           {/* 名称和稀有度 */}
-          <div className="w-32 flex-shrink-0">
-            <h4 className="text-sm font-semibold text-white truncate">{agent.name}</h4>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-xs text-white/40">#{agent.nftId}</span>
+          <div className="w-20 flex-shrink-0">
+            <h4 className="text-xs font-semibold text-white truncate">{agent.name}</h4>
+            <div className="flex items-center gap-1 mt-0.5">
+              <span className="text-[10px] text-white/40">#{agent.nftId}</span>
               <span 
-                className="text-xs font-medium"
+                className="text-[10px] font-medium"
                 style={{ color: rarity.color }}
               >
                 {rarity.name}
@@ -241,82 +234,46 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
             </div>
           </div>
 
-          {/* 状态 */}
-          <div className="w-20 flex-shrink-0">
-            <span className={`text-xs px-2 py-1 rounded-full ${status.bgColor} ${status.color}`}>
-              {status.label}
-            </span>
-          </div>
-
           {/* 余额 */}
-          <div className="w-24 flex-shrink-0">
-            <div className="flex items-center gap-1.5">
-              <Wallet className="w-3.5 h-3.5 text-luxury-gold" />
-              <span className="text-sm font-mono text-white">{agent.balance.toFixed(0)}</span>
-            </div>
+          <div className="w-14 flex-shrink-0 text-right">
+            <span className="text-xs font-mono text-white">{agent.balance.toFixed(0)}</span>
           </div>
 
           {/* 盈亏 */}
-          <div className="w-24 flex-shrink-0">
-            <div className="flex items-center gap-1.5">
-              <TrendingUp className={`w-3.5 h-3.5 ${agent.netProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`} />
-              <span className={`text-sm font-mono ${agent.netProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
-                {agent.netProfit >= 0 ? '+' : ''}{agent.netProfit.toLocaleString()}
-              </span>
-            </div>
-          </div>
-
-          {/* 场次 */}
-          <div className="w-20 flex-shrink-0">
-            <div className="flex items-center gap-1.5">
-              <Swords className="w-3.5 h-3.5 text-luxury-cyan" />
-              <span className="text-sm font-mono text-white">{agent.totalBattles}</span>
-            </div>
-          </div>
-
-          {/* 胜率 */}
-          <div className="w-20 flex-shrink-0">
-            <div className="flex items-center gap-1.5">
-              <Target className={`w-3.5 h-3.5 ${agent.winRate >= 60 ? 'text-luxury-green' : agent.winRate >= 40 ? 'text-luxury-amber' : 'text-luxury-rose'}`} />
-              <span className={`text-sm font-mono ${agent.winRate >= 60 ? 'text-luxury-green' : agent.winRate >= 40 ? 'text-luxury-amber' : 'text-luxury-rose'}`}>
-                {agent.winRate}%
-              </span>
-            </div>
+          <div className="w-14 flex-shrink-0 text-right">
+            <span className={`text-xs font-mono ${agent.netProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
+              {agent.netProfit >= 0 ? '+' : ''}{agent.netProfit.toLocaleString()}
+            </span>
           </div>
 
           {/* 操作按钮 */}
-          <div className="flex-1 flex items-center justify-end gap-2">
+          <div className="flex-1 flex items-center justify-end gap-1">
             {agent.status === 'idle' && (
               <button
                 onClick={(e) => { e.stopPropagation(); joinArena(agent.id); }}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs bg-luxury-gold/10 text-luxury-gold rounded-lg hover:bg-luxury-gold/20 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-[10px] bg-luxury-gold/10 text-luxury-gold rounded hover:bg-luxury-gold/20 transition-colors"
                 title="加入竞技场"
               >
-                <Swords className="w-3.5 h-3.5" />
+                <Swords className="w-3 h-3" />
                 <span>加入</span>
               </button>
             )}
             {agent.status === 'in_arena' && (
               <button
                 onClick={(e) => { e.stopPropagation(); leaveArena(agent.id); }}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs bg-luxury-rose/10 text-luxury-rose rounded-lg hover:bg-luxury-rose/20 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-[10px] bg-luxury-rose/10 text-luxury-rose rounded hover:bg-luxury-rose/20 transition-colors"
                 title="退出竞技场"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-3 h-3" />
                 <span>退出</span>
               </button>
             )}
             {agent.status === 'fighting' && (
-              <span className="text-xs text-white/30 px-3 py-1.5">战斗中</span>
+              <span className="text-[10px] text-white/30 px-2 py-1">战斗中</span>
             )}
             {agent.status === 'dead' && (
-              <span className="text-xs text-white/30 px-3 py-1.5">阵亡</span>
+              <span className="text-[10px] text-white/30 px-2 py-1">阵亡</span>
             )}
-          </div>
-
-          {/* 详情图标 */}
-          <div className="text-white/30 group-hover:text-white/60 transition-colors flex-shrink-0">
-            <Info className="w-4 h-4" />
           </div>
         </div>
 
