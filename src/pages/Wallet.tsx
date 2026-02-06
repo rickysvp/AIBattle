@@ -164,7 +164,30 @@ const WalletPage: React.FC = () => {
     { id: '2', name: 'CryptoKing', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=p2', joinedAt: Date.now() - 86400000 * 5, totalDeposit: 2000, reward: 100, isActive: true },
     { id: '3', name: 'GameMaster', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=p3', joinedAt: Date.now() - 86400000 * 2, totalDeposit: 0, reward: 0, isActive: false },
   ];
-  
+
+  // 邀请码和邀请链接
+  const inviteCode = 'AI2024VIP';
+  const inviteLink = `https://aibattlex.vercel.app?ref=${inviteCode}`;
+
+  // 复制邀请链接
+  const copyInviteLink = () => {
+    navigator.clipboard.writeText(inviteLink);
+    showToast(t('wallet.copied'), 'success');
+  };
+
+  // 分享邀请链接
+  const shareInviteLink = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: 'Join AIBattle!',
+        text: `Use my invite code ${inviteCode} to join AIBattle and get 100 $MON bonus!`,
+        url: inviteLink,
+      });
+    } else {
+      copyInviteLink();
+    }
+  };
+
   const totalAssets = wallet.balance + wallet.lockedBalance;
   const agentsTotalBalance = myAgents.reduce((sum, a) => sum + a.balance, 0);
   
@@ -236,7 +259,7 @@ const WalletPage: React.FC = () => {
   };
 
   const copyInviteCode = () => {
-    navigator.clipboard.writeText('AI2024VIP');
+    navigator.clipboard.writeText(inviteCode);
     showToast(t('wallet.copied'), 'success');
   };
 
@@ -810,6 +833,7 @@ const WalletPage: React.FC = () => {
             {/* 资产概览卡片 */}
             <div className="card-luxury rounded-2xl overflow-hidden mb-6 border-luxury-gold/20">
               <div className="px-8 py-6 bg-gradient-to-br from-luxury-gold/5 to-transparent">
+                {/* 总资产和操作按钮 */}
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <div className="flex items-center gap-3 mb-1">
@@ -820,27 +844,39 @@ const WalletPage: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-baseline gap-3">
-                      <p className="text-5xl font-bold text-gradient-gold font-display">{totalAssets.toLocaleString()}</p>
+                      <p className="text-5xl font-bold text-gradient-gold font-mono">{totalAssets.toLocaleString()}</p>
                       <span className="text-xl text-white/60">$MON</span>
                     </div>
                     <p className="text-lg text-white/40 mt-1">≈ ${toUSDT(totalAssets)} USDT</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-white/40 uppercase tracking-wider mb-2">{t('wallet.address')}</p>
-                    <div className="flex items-center gap-2">
-                      <code className="text-sm text-luxury-cyan font-mono bg-void-light/50 px-3 py-1.5 rounded-lg">
-                        {wallet.address.slice(0, 8)}...{wallet.address.slice(-8)}
-                      </code>
-                      <button
-                        onClick={copyAddress}
-                        className="p-2 rounded-lg bg-void-light/50 text-white/40 hover:text-white hover:bg-void-light transition-colors"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                    </div>
+                  
+                  {/* 充值/兑换/提现按钮 */}
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setShowDepositModal(true)}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-luxury-green/10 border border-luxury-green/20 text-luxury-green hover:bg-luxury-green/20 transition-colors"
+                    >
+                      <ArrowDownRight className="w-5 h-5" />
+                      <span className="font-medium">{t('wallet.deposit')}</span>
+                    </button>
+                    <button
+                      onClick={() => setShowSwapModal(true)}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-luxury-gold/10 border border-luxury-gold/20 text-luxury-gold hover:bg-luxury-gold/20 transition-colors"
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                      <span className="font-medium">{t('wallet.swap')}</span>
+                    </button>
+                    <button
+                      onClick={() => setShowWithdrawModal(true)}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-luxury-amber/10 border border-luxury-amber/20 text-luxury-amber hover:bg-luxury-amber/20 transition-colors"
+                    >
+                      <ArrowUpRight className="w-5 h-5" />
+                      <span className="font-medium">{t('wallet.withdraw')}</span>
+                    </button>
                   </div>
                 </div>
 
+                {/* 可用余额、锁定资产、Agents */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-void-light/50 rounded-xl p-4 border border-white/5">
                     <div className="flex items-center gap-2 text-white/40 mb-2">
@@ -870,42 +906,6 @@ const WalletPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
-            
-            {/* 操作按钮 */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              <button
-                onClick={() => setShowDepositModal(true)}
-                className="group p-6 card-luxury rounded-2xl text-left transition-all hover:border-luxury-green/30"
-              >
-                <div className="w-14 h-14 rounded-2xl bg-luxury-green/10 border border-luxury-green/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <ArrowDownRight className="w-7 h-7 text-luxury-green" />
-                </div>
-                <p className="text-lg font-semibold text-white mb-1">{t('wallet.deposit')}</p>
-                <p className="text-sm text-white/40">{t('wallet.depositDesc')}</p>
-              </button>
-
-              <button
-                onClick={() => setShowSwapModal(true)}
-                className="group p-6 card-luxury rounded-2xl text-left transition-all hover:border-luxury-gold/30"
-              >
-                <div className="w-14 h-14 rounded-2xl bg-luxury-gold/10 border border-luxury-gold/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <RefreshCw className="w-7 h-7 text-luxury-gold" />
-                </div>
-                <p className="text-lg font-semibold text-white mb-1">{t('wallet.swap')}</p>
-                <p className="text-sm text-white/40">{t('wallet.swapDesc')}</p>
-              </button>
-
-              <button
-                onClick={() => setShowWithdrawModal(true)}
-                className="group p-6 card-luxury rounded-2xl text-left transition-all hover:border-luxury-amber/30"
-              >
-                <div className="w-14 h-14 rounded-2xl bg-luxury-amber/10 border border-luxury-amber/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <ArrowUpRight className="w-7 h-7 text-luxury-amber" />
-                </div>
-                <p className="text-lg font-semibold text-white mb-1">{t('wallet.withdraw')}</p>
-                <p className="text-sm text-white/40">{t('wallet.withdrawDesc')}</p>
-              </button>
             </div>
 
             {/* NFT 展示模块 */}
@@ -956,7 +956,7 @@ const WalletPage: React.FC = () => {
                       <Users className="w-5 h-5 text-luxury-cyan" />
                       {t('wallet.inviteFriends')}
                     </h3>
-                    <p className="text-sm text-white/60">{t('wallet.inviteDesc').replace('100 $MON', '<span class="text-luxury-gold font-bold">100 $MON</span>')}</p>
+                    <p className="text-sm text-white/60" dangerouslySetInnerHTML={{ __html: t('wallet.inviteDesc').replace('100 $MON', '<span class="text-luxury-gold font-bold">100 $MON</span>') }} />
                   </div>
                 </div>
                 <button
@@ -968,20 +968,41 @@ const WalletPage: React.FC = () => {
               </div>
 
               <div className="mt-6 pt-6 border-t border-white/10">
-                <div className="flex items-center gap-4">
-                  <div className="flex-1 bg-void-light rounded-xl px-4 py-3 border border-white/10">
-                    <p className="text-xs text-white/40 mb-1">{t('wallet.inviteCode')}</p>
-                    <p className="text-lg font-mono text-white">AI2024VIP</p>
+                {/* 邀请链接和邀请码 */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-void-light rounded-xl px-4 py-3 border border-white/10">
+                    <p className="text-xs text-white/40 mb-1">{t('wallet.inviteLink')}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-mono text-white truncate flex-1">{inviteLink}</p>
+                      <button
+                        onClick={copyInviteLink}
+                        className="p-2 rounded-lg bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={shareInviteLink}
+                        className="p-2 rounded-lg bg-luxury-cyan/20 text-luxury-cyan hover:bg-luxury-cyan/30 transition-colors"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={copyInviteCode}
-                    className="px-6 py-3 rounded-xl bg-void-light border border-white/20 text-white hover:bg-white/10 transition-colors"
-                  >
-                    {t('common.copy')}
-                  </button>
+                  <div className="bg-void-light rounded-xl px-4 py-3 border border-white/10">
+                    <p className="text-xs text-white/40 mb-1">{t('wallet.inviteCode')}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-lg font-mono text-white">{inviteCode}</p>
+                      <button
+                        onClick={copyInviteCode}
+                        className="px-4 py-2 rounded-lg bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors text-sm"
+                      >
+                        {t('common.copy')}
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 mt-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="text-center p-3 bg-void-light/50 rounded-xl">
                     <p className="text-2xl font-bold text-luxury-cyan">{inviteRecords.length}</p>
                     <p className="text-xs text-white/40">{t('wallet.invited')}</p>
