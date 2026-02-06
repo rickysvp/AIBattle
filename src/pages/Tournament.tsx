@@ -18,7 +18,11 @@ import {
   Settings,
   CheckCircle,
   AlertCircle,
-  Crown
+  Crown,
+  Sparkles,
+  Medal,
+  Swords,
+  ArrowRight
 } from 'lucide-react';
 
 const Tournament: React.FC = () => {
@@ -199,19 +203,93 @@ const Tournament: React.FC = () => {
     return (
       <div className="min-h-screen bg-void pt-24 pb-24">
         <div className="max-w-screen-xl mx-auto px-4">
-          <div className="card-luxury rounded-2xl p-16 text-center">
-            <div className="w-24 h-24 rounded-3xl bg-void-light/50 border border-white/5 flex items-center justify-center mx-auto mb-6">
-              <Wallet className="w-12 h-12 text-white/20" />
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-3">{t('wallet.connectFirst')}</h2>
-            <p className="text-white/40 mb-6">{t('tournament.connectDesc')}</p>
-            <button
-              onClick={() => connectWallet('wallet')}
-              className="px-8 py-3 rounded-xl bg-gradient-to-r from-luxury-purple to-luxury-cyan text-white font-semibold hover:opacity-90 transition-opacity"
+          {/* 页面标题 */}
+          <div className="text-center mb-12">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-luxury-gold/10 border border-luxury-gold/20 mb-6"
             >
-              {t('wallet.connectWallet')}
-            </button>
+              <Sparkles className="w-4 h-4 text-luxury-gold" />
+              <span className="text-sm text-luxury-gold">{t('tournament.title')}</span>
+            </motion.div>
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-4xl md:text-5xl font-bold text-white mb-4"
+            >
+              {t('tournament.heroTitle') || '锦标赛'}
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-white/50 text-lg max-w-2xl mx-auto"
+            >
+              {t('tournament.heroDesc') || '参加激烈锦标赛，争夺冠军荣耀'}
+            </motion.p>
           </div>
+
+          {/* 特性展示 */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
+          >
+            <div className="card-luxury rounded-2xl p-6 text-center group hover:border-luxury-gold/30 transition-colors">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-luxury-gold/20 to-luxury-amber/20 border border-luxury-gold/30 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Trophy className="w-7 h-7 text-luxury-gold" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">{t('tournament.feature1') || '冠军奖励'}</h3>
+              <p className="text-white/40 text-sm">{t('tournament.feature1Desc') || '丰厚奖金池，冠军独享荣耀'}</p>
+            </div>
+            <div className="card-luxury rounded-2xl p-6 text-center group hover:border-luxury-purple/30 transition-colors">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-luxury-purple/20 to-luxury-cyan/20 border border-luxury-purple/30 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Swords className="w-7 h-7 text-luxury-purple" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">{t('tournament.feature2') || '激烈对决'}</h3>
+              <p className="text-white/40 text-sm">{t('tournament.feature2Desc') || '多轮淘汰赛，强者晋级'}</p>
+            </div>
+            <div className="card-luxury rounded-2xl p-6 text-center group hover:border-luxury-cyan/30 transition-colors">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-luxury-cyan/20 to-luxury-blue/20 border border-luxury-cyan/30 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Medal className="w-7 h-7 text-luxury-cyan" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">{t('tournament.feature3') || '排名荣誉'}</h3>
+              <p className="text-white/40 text-sm">{t('tournament.feature3Desc') || '全球排名，展示实力'}</p>
+            </div>
+          </motion.div>
+
+          {/* 连接钱包卡片 */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.4 }}
+            className="card-luxury rounded-3xl p-8 md:p-12 text-center relative overflow-hidden"
+          >
+            {/* 背景装饰 */}
+            <div className="absolute inset-0 bg-gradient-to-br from-luxury-gold/5 via-transparent to-luxury-purple/5" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-luxury-gold/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-luxury-purple/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+
+            <div className="relative z-10">
+              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-luxury-gold/20 to-luxury-purple/20 border border-luxury-gold/30 flex items-center justify-center mx-auto mb-6">
+                <Wallet className="w-10 h-10 text-luxury-gold" />
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">{t('wallet.connectFirst')}</h2>
+              <p className="text-white/40 mb-8 max-w-md mx-auto">{t('tournament.connectDesc') || '连接钱包报名参加锦标赛，争夺冠军'}</p>
+              <button
+                onClick={() => connectWallet('wallet')}
+                className="group relative px-8 py-4 rounded-xl overflow-hidden inline-flex items-center gap-2"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-luxury-gold via-luxury-amber to-luxury-purple" />
+                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                <span className="relative text-white font-semibold">{t('wallet.connectWallet')}</span>
+                <ArrowRight className="relative w-5 h-5 text-white group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </motion.div>
         </div>
       </div>
     );

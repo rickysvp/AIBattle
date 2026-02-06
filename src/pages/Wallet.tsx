@@ -24,8 +24,13 @@ import {
   Search,
   Download,
   ExternalLink,
-  Pickaxe
+  Pickaxe,
+  Sparkles,
+  Shield,
+  Zap,
+  ArrowRight
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface Transaction {
   id: string;
@@ -827,23 +832,95 @@ const WalletPage: React.FC = () => {
         </div>
 
         {!wallet.connected ? (
-          <div className="card-luxury rounded-2xl p-16 text-center">
-            <div className="w-24 h-24 rounded-3xl bg-void-light/50 border border-white/5 flex items-center justify-center mx-auto mb-6">
-              <Wallet className="w-12 h-12 text-white/20" />
+          <>
+            {/* 页面标题 */}
+            <div className="text-center mb-12">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-luxury-gold/10 border border-luxury-gold/20 mb-6"
+              >
+                <Sparkles className="w-4 h-4 text-luxury-gold" />
+                <span className="text-sm text-luxury-gold">{t('wallet.title')}</span>
+              </motion.div>
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-4xl md:text-5xl font-bold text-white mb-4"
+              >
+                {t('wallet.heroTitle') || '资产管理'}
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-white/50 text-lg max-w-2xl mx-auto"
+              >
+                {t('wallet.heroDesc') || '安全便捷地管理你的数字资产'}
+              </motion.p>
             </div>
-            <h2 className="text-2xl font-bold text-white mb-4">{t('wallet.connectFirst')}</h2>
-            <button
-              onClick={() => connectWallet('wallet')}
-              className="group relative px-8 py-4 rounded-xl overflow-hidden"
+
+            {/* 特性展示 */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-luxury-purple via-luxury-purple-light to-luxury-cyan" />
-              <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-              <span className="relative flex items-center gap-2 text-white font-semibold">
-                <Wallet className="w-5 h-5" />
-                {t('wallet.connectWallet')}
-              </span>
-            </button>
-          </div>
+              <div className="card-luxury rounded-2xl p-6 text-center group hover:border-luxury-gold/30 transition-colors">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-luxury-gold/20 to-luxury-amber/20 border border-luxury-gold/30 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <Wallet className="w-7 h-7 text-luxury-gold" />
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">{t('wallet.feature1') || '安全存储'}</h3>
+                <p className="text-white/40 text-sm">{t('wallet.feature1Desc') || '多重加密保护，资产安全无忧'}</p>
+              </div>
+              <div className="card-luxury rounded-2xl p-6 text-center group hover:border-luxury-purple/30 transition-colors">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-luxury-purple/20 to-luxury-cyan/20 border border-luxury-purple/30 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <Zap className="w-7 h-7 text-luxury-purple" />
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">{t('wallet.feature2') || '快速交易'}</h3>
+                <p className="text-white/40 text-sm">{t('wallet.feature2Desc') || '秒级确认，低手续费'}</p>
+              </div>
+              <div className="card-luxury rounded-2xl p-6 text-center group hover:border-luxury-cyan/30 transition-colors">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-luxury-cyan/20 to-luxury-blue/20 border border-luxury-cyan/30 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <Shield className="w-7 h-7 text-luxury-cyan" />
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">{t('wallet.feature3') || '隐私保护'}</h3>
+                <p className="text-white/40 text-sm">{t('wallet.feature3Desc') || '去中心化存储，掌控私钥'}</p>
+              </div>
+            </motion.div>
+
+            {/* 连接钱包卡片 */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4 }}
+              className="card-luxury rounded-3xl p-8 md:p-12 text-center relative overflow-hidden"
+            >
+              {/* 背景装饰 */}
+              <div className="absolute inset-0 bg-gradient-to-br from-luxury-gold/5 via-transparent to-luxury-purple/5" />
+              <div className="absolute top-0 right-0 w-64 h-64 bg-luxury-gold/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-luxury-purple/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+
+              <div className="relative z-10">
+                <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-luxury-gold/20 to-luxury-purple/20 border border-luxury-gold/30 flex items-center justify-center mx-auto mb-6">
+                  <Wallet className="w-10 h-10 text-luxury-gold" />
+                </div>
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">{t('wallet.connectFirst')}</h2>
+                <p className="text-white/40 mb-8 max-w-md mx-auto">{t('wallet.connectDesc') || '连接钱包开始管理你的数字资产'}</p>
+                <button
+                  onClick={() => connectWallet('wallet')}
+                  className="group relative px-8 py-4 rounded-xl overflow-hidden inline-flex items-center gap-2"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-luxury-gold via-luxury-amber to-luxury-purple" />
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                  <span className="relative text-white font-semibold">{t('wallet.connectWallet')}</span>
+                  <ArrowRight className="relative w-5 h-5 text-white group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
+            </motion.div>
+          </>
         ) : (
           <>
             {/* 资产概览卡片 */}
