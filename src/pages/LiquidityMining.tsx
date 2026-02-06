@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/gameStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,7 +9,6 @@ import {
   Users,
   Wallet,
   Plus,
-  Minus,
   AlertCircle,
   CheckCircle,
   Lock,

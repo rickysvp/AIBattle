@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import type { Tournament, TournamentRound } from '../types';
-import { Clock, Users, Trophy, Zap, ChevronRight } from 'lucide-react';
+import { Clock, Users, Trophy, Zap } from 'lucide-react';
 
 interface TournamentProgressProps {
   tournament: Tournament;
@@ -70,7 +70,7 @@ const TournamentProgress: React.FC<TournamentProgressProps> = ({ tournament }) =
       {/* 轮次详情 */}
       <div className="space-y-3">
         {rounds.map((round, index) => {
-          const { status, completed, total } = getRoundStatus(round.key, index);
+          const { completed, total } = getRoundStatus(round.key, index);
           const isActive = index === currentRoundIndex && tournament.status === 'ongoing';
           const isCompleted = index < currentRoundIndex || (tournament.status === 'finished' && index <= currentRoundIndex);
 

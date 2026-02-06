@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/gameStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,17 +7,12 @@ import {
   Trophy,
   TrendingUp,
   Clock,
-  Users,
   Wallet,
   CheckCircle,
   AlertCircle,
-  Settings,
-  Zap,
-  Info,
-  ChevronRight,
-  Filter
+  Settings
 } from 'lucide-react';
-import type { PredictionMarket, PredictionBet, AutoBetRule } from '../types';
+import type { PredictionMarket, AutoBetRule } from '../types';
 
 const PredictionMarketPage: React.FC = () => {
   const { t } = useTranslation();

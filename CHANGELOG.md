@@ -7,6 +7,23 @@
 
 ---
 
+## [1.8.3] - 2026-02-06
+
+### 修复
+- 修复 TypeScript 编译错误：清理未使用的变量和导入
+- 修复 AgentCard.tsx 中的未使用图标和状态
+- 修复 ArenaCanvas.tsx 中的未使用导入和变量
+- 修复 BattleLog.tsx 中的未使用 title 属性
+- 修复 Header.tsx 中的未使用状态和导入
+- 修复 TournamentBracket.tsx 中的未使用类型和变量
+- 修复 TournamentLiveMatch.tsx 中的未使用导入和状态
+- 修复 TournamentProgress.tsx 中的未使用导入和变量
+- 修复 Arena.tsx 中的未使用组件、变量和类型错误
+- 修复 LiquidityMining.tsx 中的未使用导入
+- 修复 PredictionMarket.tsx 中的未使用导入和类型
+
+---
+
 ## [1.8.1] - 2026-02-06
 
 ### 修复

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Agent, Projectile, CoinTransfer, BalanceChange } from '../types';
+import { Projectile, CoinTransfer, BalanceChange } from '../types';
 import { useGameStore } from '../store/gameStore';
 import PixelAgent from './PixelAgent';
-import { Swords, Users, Timer, Trophy, Coins, TrendingDown, TrendingUp } from 'lucide-react';
+import { Swords, Timer, Coins } from 'lucide-react';
 
 interface ArenaCanvasProps {
   phase: string;
@@ -28,7 +28,6 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
   const participants = useGameStore(state => state.arena.participants);
   const addBattleLog = useGameStore(state => state.addBattleLog);
   const updateParticipant = useGameStore(state => state.updateParticipant);
-  const roundNumber = useGameStore(state => state.arena.roundNumber);
   
   // 战斗动画循环 - 使用余额作为血量
   useEffect(() => {
@@ -52,8 +51,8 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
 
       if (attackerSlot === -1 || targetSlot === -1) return;
 
-      const attackerPos = getSlotPosition(attackerSlot, 10);
-      const targetPos = getSlotPosition(targetSlot, 10);
+      const attackerPos = getSlotPosition(attackerSlot);
+      const targetPos = getSlotPosition(targetSlot);
 
       // 设置攻击动画
       setAttackingAgents(prev => new Set(prev).add(attacker.id));
@@ -204,7 +203,7 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
   }, []);
   
   // 获取坑位位置（百分比）- 使用椭圆布局避免中间和两边重叠
-  const getSlotPosition = (index: number, total: number) => {
+  const getSlotPosition = (index: number) => {
     // 10个位置分成上下两行，每行5个
     const positions = [
       // 上行 - 稍微偏上
@@ -215,7 +214,7 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
     return positions[index] || { x: 50, y: 50 };
   };
   
-  const slotPositions = Array.from({ length: 10 }, (_, i) => getSlotPosition(i, 10));
+  const slotPositions = Array.from({ length: 10 }, (_, i) => getSlotPosition(i));
 
   return (
     <div

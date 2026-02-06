@@ -14,11 +14,10 @@ import {
 
 interface BattleLogProps {
   logs: BattleLogType[];
-  title: string;
   maxHeight?: string;
 }
 
-const BattleLog: React.FC<BattleLogProps> = ({ logs, title, maxHeight = '300px' }) => {
+const BattleLog: React.FC<BattleLogProps> = ({ logs, maxHeight = '300px' }) => {
   const { t, i18n } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
 

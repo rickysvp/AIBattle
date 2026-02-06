@@ -6,12 +6,6 @@ import AgentDetailModal from './AgentDetailModal';
 import { 
   Zap, 
   Shield, 
-  Plus,
-  Minus,
-  LogIn,
-  LogOut,
-  ChevronDown,
-  ChevronUp,
   Trophy,
   Target,
   Flame,
@@ -70,28 +64,8 @@ const rarityConfig: Record<Rarity, { name: string; color: string; bgColor: strin
 };
 
 const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false }) => {
-  const [showActions, setShowActions] = useState(false);
-  const [fundAmount, setFundAmount] = useState('');
   const [isHovered, setIsHovered] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  
-  const { allocateFunds, withdrawFunds, joinArena, leaveArena, wallet } = useGameStore();
-  
-  const handleAllocate = () => {
-    const amount = parseFloat(fundAmount);
-    if (amount > 0 && amount <= wallet.balance) {
-      allocateFunds(agent.id, amount);
-      setFundAmount('');
-    }
-  };
-  
-  const handleWithdraw = () => {
-    const amount = parseFloat(fundAmount);
-    if (amount > 0 && amount <= agent.balance) {
-      withdrawFunds(agent.id, amount);
-      setFundAmount('');
-    }
-  };
   
   const getStatusConfig = () => {
     switch (agent.status) {

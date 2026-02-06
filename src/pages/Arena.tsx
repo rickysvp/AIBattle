@@ -6,7 +6,7 @@ import ArenaCanvas from '../components/ArenaCanvas';
 import BattleLog from '../components/BattleLog';
 import AgentCard from '../components/AgentCard';
 import { Agent } from '../types';
-import { Swords, Users, Trophy, Zap, TrendingUp, Plus, Wallet, Sparkles, X, ChevronRight } from 'lucide-react';
+import { Swords, Users, Trophy, Zap, Plus, Wallet, X, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // 生成今日 TOP 100 排行榜数据
@@ -19,35 +19,6 @@ const generateTop100 = () => {
     profit: Math.floor(Math.random() * 50000) + 1000,
     color: colors[Math.floor(Math.random() * colors.length)]
   })).sort((a, b) => b.profit - a.profit);
-};
-
-// 平台统计组件
-const PlatformStats: React.FC = () => {
-  const { t } = useTranslation();
-  const { myAgents, systemAgents } = useGameStore();
-
-  // 计算平台总数据
-  const totalMintedAgents = myAgents.length + systemAgents.length;
-  const totalTVL = [...myAgents, ...systemAgents].reduce((sum, a) => sum + a.balance, 0);
-
-  return (
-    <div className="w-full bg-void-panel/80 border border-white/5 rounded-xl overflow-hidden mb-4">
-      <div className="flex items-center">
-        {/* Agents统计 */}
-        <div className="flex-shrink-0 px-4 py-2 bg-luxury-purple/10 border-r border-white/10 flex items-center gap-2">
-          <Users className="w-4 h-4 text-luxury-purple" />
-          <span className="text-xs font-semibold text-luxury-purple">{t('platform.agents')}</span>
-          <span className="text-xs font-bold text-white font-mono">{totalMintedAgents.toLocaleString()}</span>
-        </div>
-        {/* TVL统计 */}
-        <div className="flex-shrink-0 px-4 py-2 bg-luxury-gold/10 border-r border-white/10 flex items-center gap-2">
-          <Wallet className="w-4 h-4 text-luxury-gold" />
-          <span className="text-xs font-semibold text-luxury-gold">TVL</span>
-          <span className="text-xs font-bold text-white font-mono">{totalTVL.toLocaleString()} $MON</span>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 // 跑马灯组件
@@ -365,7 +336,6 @@ const Arena: React.FC = () => {
   
   // 我的在竞技场的 Agents
   const myArenaAgents = myAgents.filter(a => a.status === 'in_arena' || a.status === 'fighting');
-  const myIdleAgents = myAgents.filter(a => a.status === 'idle');
 
   // 排序后的 Agents
   const sortedAgents = useMemo(() => {
@@ -380,8 +350,8 @@ const Arena: React.FC = () => {
           const winRateB = totalB > 0 ? b.wins / totalB : 0;
           return winRateB - winRateA;
         case 'profit':
-          // 使用 earnings 作为盈亏
-          return b.earnings - a.earnings;
+          // 使用 netProfit 作为盈亏
+          return b.netProfit - a.netProfit;
         default:
           return 0;
       }
@@ -592,7 +562,6 @@ const Arena: React.FC = () => {
                   >
                     <BattleLog
                       logs={logTab === 'arena' ? arena.battleLogs : myBattleLogs}
-                      title=""
                       maxHeight="280px"
                     />
                   </motion.div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import type { Tournament, TournamentMatch, TournamentRound, Agent } from '../types';
+import type { Tournament, TournamentMatch, TournamentRound } from '../types';
 
 interface TournamentBracketProps {
   tournament: Tournament;
@@ -8,7 +8,7 @@ interface TournamentBracketProps {
 }
 
 const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournament, onMatchClick }) => {
-  const { matches, currentRound, qualifiedAgents } = tournament;
+  const { matches, currentRound } = tournament;
 
   // 获取某一轮的所有比赛
   const getMatchesByRound = (round: TournamentRound) => {

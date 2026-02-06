@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { useTranslation } from 'react-i18next';
-import { Wallet, LogOut, Zap, Sparkles, Globe, ChevronDown, Users } from 'lucide-react';
+import { Wallet, LogOut, Zap, Sparkles, Globe, Users } from 'lucide-react';
 import ConnectWalletModal from './ConnectWalletModal';
 import { languages } from '../i18n';
 
@@ -9,12 +9,9 @@ const Header: React.FC = () => {
   const { wallet, connectWallet, disconnectWallet, myAgents, systemAgents } = useGameStore();
   const { t, i18n } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
-  const [hovered, setHovered] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
-
-  const currentLang = languages.find(l => l.code === i18n.language) || languages[0];
 
   const handleLanguageChange = (code: string) => {
     i18n.changeLanguage(code);

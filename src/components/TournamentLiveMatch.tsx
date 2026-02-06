@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { TournamentMatch, Agent } from '../types';
-import { Sword, Shield, Zap, Heart, Crosshair } from 'lucide-react';
+import { Sword, Shield, Heart } from 'lucide-react';
 
 interface TournamentLiveMatchProps {
   match: TournamentMatch;
@@ -19,8 +19,8 @@ interface BattleAction {
 }
 
 const TournamentLiveMatch: React.FC<TournamentLiveMatchProps> = ({ match, onComplete, isLive = true }) => {
-  const [agentA, setAgentA] = useState<Agent | undefined>(match.agentA);
-  const [agentB, setAgentB] = useState<Agent | undefined>(match.agentB);
+  const [agentA] = useState<Agent | undefined>(match.agentA);
+  const [agentB] = useState<Agent | undefined>(match.agentB);
   const [winner, setWinner] = useState<string | null>(match.winnerId || null);
   const [actions, setActions] = useState<BattleAction[]>([]);
   const [currentTurn, setCurrentTurn] = useState(0);
@@ -45,8 +45,6 @@ const TournamentLiveMatch: React.FC<TournamentLiveMatchProps> = ({ match, onComp
       // 决定攻击方
       const attacker = turn % 2 === 1 ? agentA : agentB;
       const defender = turn % 2 === 1 ? agentB : agentA;
-      let currentHpA = turn % 2 === 1 ? hpA : hpB;
-      let currentHpB = turn % 2 === 1 ? hpB : hpA;
 
       // 计算伤害
       const baseDamage = attacker.attack - defender.defense * 0.5;
