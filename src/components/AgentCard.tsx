@@ -14,7 +14,13 @@ import {
   LogIn,
   LogOut,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Trophy,
+  Target,
+  Flame,
+  BarChart3,
+  History,
+  Award
 } from 'lucide-react';
 
 interface AgentCardProps {
@@ -288,7 +294,42 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false }) => {
       
       {/* 属性网格 */}
       <div className="px-5 pb-5">
-        <div className="grid grid-cols-4 gap-3 mb-5">
+        {/* 主要统计 - 赢率和盈亏 */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-gradient-to-br from-luxury-purple/10 to-luxury-cyan/10 rounded-xl p-3 border border-luxury-purple/20">
+            <div className="flex items-center gap-1.5 text-white/40 mb-1">
+              <Target className="w-3.5 h-3.5 text-luxury-purple" />
+              <span className="text-[10px] uppercase tracking-wider">胜率</span>
+            </div>
+            <p className={`text-xl font-bold font-mono ${agent.winRate >= 60 ? 'text-luxury-green' : agent.winRate >= 40 ? 'text-luxury-amber' : 'text-luxury-rose'}`}>
+              {agent.winRate}%
+            </p>
+            <p className="text-[10px] text-white/30 mt-0.5">{agent.wins}胜 {agent.losses}负</p>
+          </div>
+          
+          <div className="bg-gradient-to-br from-luxury-green/10 to-luxury-cyan/10 rounded-xl p-3 border border-luxury-green/20">
+            <div className="flex items-center gap-1.5 text-white/40 mb-1">
+              <TrendingUp className="w-3.5 h-3.5 text-luxury-green" />
+              <span className="text-[10px] uppercase tracking-wider">净利润</span>
+            </div>
+            <p className={`text-xl font-bold font-mono ${agent.netProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
+              {agent.netProfit >= 0 ? '+' : ''}{agent.netProfit.toLocaleString()}
+            </p>
+            <p className="text-[10px] text-white/30 mt-0.5">收益: {agent.totalEarnings.toLocaleString()}</p>
+          </div>
+          
+          <div className="bg-gradient-to-br from-luxury-gold/10 to-luxury-amber/10 rounded-xl p-3 border border-luxury-gold/20">
+            <div className="flex items-center gap-1.5 text-white/40 mb-1">
+              <Trophy className="w-3.5 h-3.5 text-luxury-gold" />
+              <span className="text-[10px] uppercase tracking-wider">锦标赛</span>
+            </div>
+            <p className="text-xl font-bold text-luxury-gold font-mono">{agent.tournamentWins}</p>
+            <p className="text-[10px] text-white/30 mt-0.5">前三: {agent.tournamentTop3}次</p>
+          </div>
+        </div>
+
+        {/* 详细统计 */}
+        <div className="grid grid-cols-4 gap-3 mb-4">
           <div className="bg-void-light/50 rounded-xl p-3 border border-white/5">
             <div className="flex items-center gap-1.5 text-white/40 mb-1">
               <Coins className="w-3.5 h-3.5" />
@@ -315,10 +356,32 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false }) => {
           
           <div className="bg-void-light/50 rounded-xl p-3 border border-white/5">
             <div className="flex items-center gap-1.5 text-white/40 mb-1">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span className="text-[10px] uppercase tracking-wider">击杀</span>
+              <Flame className="w-3.5 h-3.5" />
+              <span className="text-[10px] uppercase tracking-wider">连杀</span>
             </div>
-            <p className="text-lg font-bold text-luxury-purple font-mono">{agent.kills}</p>
+            <p className="text-lg font-bold text-luxury-purple font-mono">{agent.maxKillStreak}</p>
+          </div>
+        </div>
+
+        {/* 战斗统计 */}
+        <div className="bg-void-light/30 rounded-xl p-4 border border-white/5 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart3 className="w-4 h-4 text-luxury-cyan" />
+            <span className="text-sm font-medium text-white">战斗统计</span>
+          </div>
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div>
+              <p className="text-white/40 text-xs mb-1">总场次</p>
+              <p className="text-white font-mono">{agent.totalBattles}</p>
+            </div>
+            <div>
+              <p className="text-white/40 text-xs mb-1">场均伤害</p>
+              <p className="text-luxury-rose font-mono">{agent.avgDamageDealt}</p>
+            </div>
+            <div>
+              <p className="text-white/40 text-xs mb-1">场均承伤</p>
+              <p className="text-luxury-cyan font-mono">{agent.avgDamageTaken}</p>
+            </div>
           </div>
         </div>
         

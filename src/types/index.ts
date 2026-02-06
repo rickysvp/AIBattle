@@ -8,14 +8,46 @@ export interface Agent {
   attack: number;
   defense: number;
   balance: number;
+  // 基础统计
   wins: number;
   losses: number;
   kills: number;
-  earnings: number;
+  deaths: number;
+  // 详细统计
+  totalBattles: number;
+  winRate: number; // 胜率百分比
+  totalEarnings: number; // 总收益
+  totalLosses: number; // 总亏损
+  netProfit: number; // 净利润
+  avgDamageDealt: number; // 平均造成伤害
+  avgDamageTaken: number; // 平均承受伤害
+  maxKillStreak: number; // 最高连杀
+  currentKillStreak: number; // 当前连杀
+  tournamentWins: number; // 锦标赛冠军次数
+  tournamentTop3: number; // 锦标赛前三次数
+  // 历史记录
+  battleHistory: BattleRecord[];
+  // 状态
   status: 'idle' | 'in_arena' | 'fighting' | 'dead';
   position?: { x: number; y: number };
   isPlayer: boolean;
   pixelStyle: number; // 像素风格变体
+  createdAt: number; // 创建时间
+}
+
+// 战斗记录
+export interface BattleRecord {
+  id: string;
+  timestamp: number;
+  opponent: string;
+  result: 'win' | 'loss' | 'draw';
+  damageDealt: number;
+  damageTaken: number;
+  earnings: number;
+  kills: number;
+  isTournament: boolean;
+  tournamentName?: string;
+  rank?: number;
 }
 
 // 战斗日志类型

@@ -1,4 +1,4 @@
-import { Agent } from '../types';
+import { Agent, BattleRecord } from '../types';
 
 // 随机名称生成
 const prefixes = ['超级', '闪电', '暗影', '烈焰', '冰霜', '雷霆', '狂暴', '幻影', '钢铁', '黄金'];
@@ -29,9 +29,87 @@ const generateName = () => {
   return `${prefix}${suffix}#${number}`;
 };
 
+// 生成战斗历史记录
+const generateBattleHistory = (wins: number, losses: number): BattleRecord[] => {
+  const history: BattleRecord[] = [];
+  const now = Date.now();
+
+  for (let i = 0; i < wins + losses; i++) {
+    const isWin = i < wins;
+    history.push({
+      id: `battle-${i}-${Math.random().toString(36).substr(2, 6)}`,
+      timestamp: now - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000), // 过去30天内
+      opponent: `Opponent#${Math.floor(Math.random() * 1000)}`,
+      result: isWin ? 'win' : 'loss',
+      damageDealt: 50 + Math.floor(Math.random() * 100),
+      damageTaken: isWin ? 20 + Math.floor(Math.random() * 50) : 80 + Math.floor(Math.random() * 50),
+      earnings: isWin ? 50 + Math.floor(Math.random() * 150) : -30 - Math.floor(Math.random() * 50),
+      kills: isWin ? 1 + Math.floor(Math.random() * 3) : Math.floor(Math.random() * 2),
+      isTournament: Math.random() > 0.7,
+      tournamentName: Math.random() > 0.7 ? `Tournament #${Math.floor(Math.random() * 100)}` : undefined,
+      rank: Math.random() > 0.7 ? Math.floor(Math.random() * 10) + 1 : undefined,
+    });
+  }
+
+  return history.sort((a, b) => b.timestamp - a.timestamp);
+};
+
+// 计算Agent统计数据
+const calculateAgentStats = (wins: number, losses: number, kills: number, history: BattleRecord[]) => {
+  const totalBattles = wins + losses;
+  const winRate = totalBattles > 0 ? Math.round((wins / totalBattles) * 100) : 0;
+
+  const totalEarnings = history.reduce((sum, h) => h.earnings > 0 ? sum + h.earnings : sum, 0);
+  const totalLosses = history.reduce((sum, h) => h.earnings < 0 ? sum + Math.abs(h.earnings) : sum, 0);
+  const netProfit = totalEarnings - totalLosses;
+
+  const avgDamageDealt = history.length > 0
+    ? Math.round(history.reduce((sum, h) => sum + h.damageDealt, 0) / history.length)
+    : 0;
+  const avgDamageTaken = history.length > 0
+    ? Math.round(history.reduce((sum, h) => sum + h.damageTaken, 0) / history.length)
+    : 0;
+
+  // 计算最高连杀
+  let maxKillStreak = 0;
+  let currentStreak = 0;
+  [...history].reverse().forEach(h => {
+    if (h.result === 'win') {
+      currentStreak++;
+      maxKillStreak = Math.max(maxKillStreak, currentStreak);
+    } else {
+      currentStreak = 0;
+    }
+  });
+
+  const tournamentWins = history.filter(h => h.isTournament && h.rank === 1).length;
+  const tournamentTop3 = history.filter(h => h.isTournament && h.rank && h.rank <= 3).length;
+
+  return {
+    totalBattles,
+    winRate,
+    totalEarnings,
+    totalLosses,
+    netProfit,
+    avgDamageDealt,
+    avgDamageTaken,
+    maxKillStreak,
+    currentKillStreak: currentStreak,
+    tournamentWins,
+    tournamentTop3,
+  };
+};
+
 // 生成随机 Agent
 export const generateRandomAgent = (isPlayer: boolean = false): Agent => {
   const baseHp = 100 + Math.floor(Math.random() * 50);
+  const wins = Math.floor(Math.random() * 30);
+  const losses = Math.floor(Math.random() * 20);
+  const kills = Math.floor(Math.random() * 50);
+
+  const battleHistory = generateBattleHistory(wins, losses);
+  const stats = calculateAgentStats(wins, losses, kills, battleHistory);
+
   return {
     id: generateId(),
     name: generateName(),
@@ -41,25 +119,39 @@ export const generateRandomAgent = (isPlayer: boolean = false): Agent => {
     attack: 10 + Math.floor(Math.random() * 10),
     defense: 5 + Math.floor(Math.random() * 5),
     balance: 0,
-    wins: 0,
-    losses: 0,
-    kills: 0,
-    earnings: 0,
+    // 基础统计
+    wins,
+    losses,
+    kills,
+    deaths: losses,
+    // 详细统计
+    totalBattles: stats.totalBattles,
+    winRate: stats.winRate,
+    totalEarnings: stats.totalEarnings,
+    totalLosses: stats.totalLosses,
+    netProfit: stats.netProfit,
+    avgDamageDealt: stats.avgDamageDealt,
+    avgDamageTaken: stats.avgDamageTaken,
+    maxKillStreak: stats.maxKillStreak,
+    currentKillStreak: stats.currentKillStreak,
+    tournamentWins: stats.tournamentWins,
+    tournamentTop3: stats.tournamentTop3,
+    // 历史记录
+    battleHistory,
+    // 状态
     status: 'idle',
     isPlayer,
-    pixelStyle: Math.floor(Math.random() * 8), // 8种像素风格变体
+    pixelStyle: Math.floor(Math.random() * 8),
+    createdAt: Date.now(),
   };
 };
 
-// 生成系统 Agents（带初始余额）
+// 生成系统 Agents（带初始余额和真实数据）
 export const generateSystemAgents = (count: number): Agent[] => {
   return Array.from({ length: count }, () => {
     const agent = generateRandomAgent(false);
     agent.balance = 50 + Math.floor(Math.random() * 200); // 50-250 余额
     agent.status = 'in_arena';
-    agent.wins = Math.floor(Math.random() * 20);
-    agent.losses = Math.floor(Math.random() * 15);
-    agent.kills = Math.floor(Math.random() * 30);
     return agent;
   });
 };
@@ -83,7 +175,7 @@ export const generateRandomPosition = (centerX: number, centerY: number, maxRadi
   };
 };
 
-// 生成锦标赛系统 Agents（带足够余额报名）
+// 生成锦标赛系统 Agents（带足够余额报名和真实数据）
 export const generateTournamentAgents = (count: number, startIndex: number = 0): Agent[] => {
   const tournamentPrefixes = ['冠军', '王者', '传说', '神话', '至尊', '无敌', '神话', '传奇', '史诗', '英雄'];
   const tournamentSuffixes = ['战神', '斗神', '武神', '剑圣', '刀皇', '枪神', '拳霸', '影王', '魔君', '帝尊'];
@@ -92,6 +184,13 @@ export const generateTournamentAgents = (count: number, startIndex: number = 0):
     const index = startIndex + i;
     const prefix = tournamentPrefixes[index % tournamentPrefixes.length];
     const suffix = tournamentSuffixes[Math.floor(index / tournamentPrefixes.length) % tournamentSuffixes.length];
+
+    const wins = Math.floor(Math.random() * 50) + 20;
+    const losses = Math.floor(Math.random() * 30) + 10;
+    const kills = Math.floor(Math.random() * 80) + 30;
+
+    const battleHistory = generateBattleHistory(wins, losses);
+    const stats = calculateAgentStats(wins, losses, kills, battleHistory);
 
     const agent: Agent = {
       id: `tournament-${index}-${Math.random().toString(36).substr(2, 6)}`,
@@ -102,13 +201,30 @@ export const generateTournamentAgents = (count: number, startIndex: number = 0):
       attack: 15 + Math.floor(Math.random() * 15),
       defense: 8 + Math.floor(Math.random() * 8),
       balance: 500 + Math.floor(Math.random() * 500), // 500-1000 余额，足够报名
-      wins: Math.floor(Math.random() * 50),
-      losses: Math.floor(Math.random() * 30),
-      kills: Math.floor(Math.random() * 80),
-      earnings: Math.floor(Math.random() * 5000),
+      // 基础统计
+      wins,
+      losses,
+      kills,
+      deaths: losses,
+      // 详细统计
+      totalBattles: stats.totalBattles,
+      winRate: stats.winRate,
+      totalEarnings: stats.totalEarnings,
+      totalLosses: stats.totalLosses,
+      netProfit: stats.netProfit,
+      avgDamageDealt: stats.avgDamageDealt,
+      avgDamageTaken: stats.avgDamageTaken,
+      maxKillStreak: stats.maxKillStreak,
+      currentKillStreak: stats.currentKillStreak,
+      tournamentWins: stats.tournamentWins,
+      tournamentTop3: stats.tournamentTop3,
+      // 历史记录
+      battleHistory,
+      // 状态
       status: 'idle',
       isPlayer: false,
       pixelStyle: index % 8,
+      createdAt: Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000),
     };
     return agent;
   });
