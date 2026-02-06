@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { 
   Wallet, 
   TrendingUp, 
   TrendingDown, 
   Clock, 
-  Plus, 
-  PieChart,
+  Plus,
   ArrowUpRight,
   ArrowDownRight,
   Copy,
@@ -23,7 +23,8 @@ import {
   Loader2,
   Search,
   Download,
-  ExternalLink
+  ExternalLink,
+  Pickaxe
 } from 'lucide-react';
 
 interface Transaction {
@@ -63,7 +64,8 @@ const MON_PRICE_CHANGE_24H = 5.23;
 
 const WalletPage: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { wallet, myAgents, connectWallet } = useGameStore();
+  const navigate = useNavigate();
+  const { wallet, myAgents, connectWallet, withdrawFunds } = useGameStore();
   
   // 弹窗状态
   const [showDepositModal, setShowDepositModal] = useState(false);
@@ -186,6 +188,16 @@ const WalletPage: React.FC = () => {
     } else {
       copyInviteLink();
     }
+  };
+
+  // 一键归集所有 Agents 的余额到可用余额
+  const handleWithdrawAllFromAgents = () => {
+    myAgents.forEach(agent => {
+      if (agent.balance > 0) {
+        withdrawFunds(agent.id, agent.balance);
+      }
+    });
+    showToast(t('wallet.withdrawAllSuccess'), 'success');
   };
 
   const totalAssets = wallet.balance + wallet.lockedBalance;
@@ -848,9 +860,21 @@ const WalletPage: React.FC = () => {
                       <span className="text-xl text-white/60">$MON</span>
                     </div>
                     <p className="text-lg text-white/40 mt-1">≈ ${toUSDT(totalAssets)} USDT</p>
+                    {/* 钱包地址 */}
+                    <div className="flex items-center gap-2 mt-3">
+                      <code className="text-sm text-luxury-cyan font-mono bg-void-light/50 px-3 py-1.5 rounded-lg">
+                        {wallet.address}
+                      </code>
+                      <button
+                        onClick={copyAddress}
+                        className="p-2 rounded-lg bg-void-light/50 text-white/40 hover:text-white hover:bg-void-light transition-colors"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  
-                  {/* 充值/兑换/提现按钮 */}
+
+                  {/* 存款/兑换/提现按钮 */}
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => setShowDepositModal(true)}
@@ -876,7 +900,7 @@ const WalletPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 可用余额、锁定资产、Agents */}
+                {/* 可用余额、锁定资产、流动性挖矿 */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-void-light/50 rounded-xl p-4 border border-white/5">
                     <div className="flex items-center gap-2 text-white/40 mb-2">
@@ -888,21 +912,34 @@ const WalletPage: React.FC = () => {
                   </div>
 
                   <div className="bg-void-light/50 rounded-xl p-4 border border-white/5">
-                    <div className="flex items-center gap-2 text-white/40 mb-2">
-                      <TrendingUp className="w-4 h-4" />
-                      <span className="text-xs uppercase tracking-wider">{t('wallet.locked')}</span>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 text-white/40">
+                        <TrendingUp className="w-4 h-4" />
+                        <span className="text-xs uppercase tracking-wider">{t('wallet.locked')}</span>
+                      </div>
+                      {agentsTotalBalance > 0 && (
+                        <button
+                          onClick={handleWithdrawAllFromAgents}
+                          className="text-xs px-2 py-1 rounded bg-luxury-amber/20 text-luxury-amber hover:bg-luxury-amber/30 transition-colors"
+                        >
+                          {t('wallet.withdraw')}
+                        </button>
+                      )}
                     </div>
                     <p className="text-2xl font-bold text-luxury-amber font-mono">{agentsTotalBalance.toLocaleString()}</p>
                     <p className="text-xs text-white/40 mt-1">≈ ${toUSDT(agentsTotalBalance)} USDT</p>
                   </div>
 
-                  <div className="bg-void-light/50 rounded-xl p-4 border border-white/5">
+                  <div
+                    onClick={() => navigate('/mining')}
+                    className="bg-void-light/50 rounded-xl p-4 border border-white/5 cursor-pointer hover:border-luxury-purple/30 hover:bg-void-light/70 transition-all group"
+                  >
                     <div className="flex items-center gap-2 text-white/40 mb-2">
-                      <PieChart className="w-4 h-4" />
-                      <span className="text-xs uppercase tracking-wider">{t('wallet.agents')}</span>
+                      <Pickaxe className="w-4 h-4 text-luxury-purple group-hover:text-luxury-purple-light transition-colors" />
+                      <span className="text-xs uppercase tracking-wider">{t('wallet.liquidityMining')}</span>
                     </div>
-                    <p className="text-2xl font-bold text-luxury-purple font-mono">{myAgents.length}</p>
-                    <p className="text-xs text-white/40 mt-1">{t('wallet.totalValue')} {toUSDT(agentsTotalBalance)} USDT</p>
+                    <p className="text-2xl font-bold text-luxury-purple font-mono">{t('wallet.clickToEnter')}</p>
+                    <p className="text-xs text-white/40 mt-1">{t('wallet.highYield')}</p>
                   </div>
                 </div>
               </div>
