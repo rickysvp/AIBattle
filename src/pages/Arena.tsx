@@ -431,8 +431,8 @@ const Arena: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <Trophy className="w-5 h-5 text-luxury-gold" />
                             <div>
-                              <h3 className="text-sm font-bold text-luxury-gold font-display">{t('leaderboard.top3')}</h3>
-                              <p className="text-[10px] text-white/40">{t('arena.round')} {timerStateRef.current.round}</p>
+                              <h3 className="text-sm font-bold text-luxury-gold font-display">{t('arena.round')} {displaySystemRounds.toLocaleString()}</h3>
+                              <p className="text-[10px] text-white/40">{t('leaderboard.top3')}</p>
                             </div>
                           </div>
                           <button

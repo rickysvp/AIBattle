@@ -1,17 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { useTranslation } from 'react-i18next';
-import { Wallet, LogOut, Zap, Sparkles, Globe, Users } from 'lucide-react';
+import { Wallet, LogOut, Zap, Sparkles, Globe, Users, Trophy } from 'lucide-react';
 import ConnectWalletModal from './ConnectWalletModal';
 import { languages } from '../i18n';
 
 const Header: React.FC = () => {
-  const { wallet, connectWallet, disconnectWallet, myAgents, systemAgents } = useGameStore();
+  const { wallet, connectWallet, disconnectWallet, myAgents, systemAgents, getTotalSystemRounds } = useGameStore();
   const { t, i18n } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [displayRound, setDisplayRound] = useState(1);
+
+  // 动态计算当前轮次
+  useEffect(() => {
+    const updateRound = () => {
+      setDisplayRound(getTotalSystemRounds());
+    };
+    updateRound();
+    const interval = setInterval(updateRound, 200);
+    return () => clearInterval(interval);
+  }, [getTotalSystemRounds]);
 
   const handleLanguageChange = (code: string) => {
     i18n.changeLanguage(code);
@@ -56,13 +67,22 @@ const Header: React.FC = () => {
                 <p className="text-sm font-bold text-white font-mono">{(myAgents.length + systemAgents.length).toLocaleString()}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 pl-3">
+            <div className="flex items-center gap-3 pl-3 pr-4 border-r border-white/10">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-luxury-gold/20 to-luxury-amber/20 border border-luxury-gold/30 flex items-center justify-center">
                 <Wallet className="w-4 h-4 text-luxury-gold" />
               </div>
               <div>
-                <p className="text-[10px] text-white/40 uppercase tracking-wider">TVL</p>
+                <p className="text-[10px] text-white/40 uppercase tracking-wider">TVL (MON)</p>
                 <p className="text-sm font-bold text-luxury-gold font-mono">{[...myAgents, ...systemAgents].reduce((sum, a) => sum + a.balance, 0).toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 pl-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-luxury-cyan/20 to-luxury-blue/20 border border-luxury-cyan/30 flex items-center justify-center">
+                <Trophy className="w-4 h-4 text-luxury-cyan" />
+              </div>
+              <div>
+                <p className="text-[10px] text-white/40 uppercase tracking-wider">Round</p>
+                <p className="text-sm font-bold text-luxury-cyan font-mono">{displayRound.toLocaleString()}</p>
               </div>
             </div>
           </div>
