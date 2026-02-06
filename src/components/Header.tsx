@@ -42,8 +42,14 @@ const Header: React.FC = () => {
         <div className="max-w-screen-xl mx-auto px-4 h-20 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-6">
-          <h1 className="text-3xl font-bold font-display text-white tracking-wider">
-            AI <span className="text-gradient">Brawl</span>
+          <h1 className="flex items-baseline font-bold font-display tracking-wider">
+            <span className="text-3xl text-white">AI</span>
+            <span className="text-3xl text-gradient">brawl</span>
+            <span className="relative ml-0.5 text-lg font-medium">
+              <span className="text-luxury-cyan">.</span>
+              <span className="bg-gradient-to-r from-luxury-purple via-luxury-cyan to-luxury-gold bg-clip-text text-transparent">fun</span>
+              <span className="absolute -bottom-0.5 left-0 right-0 h-px bg-gradient-to-r from-luxury-purple/50 via-luxury-cyan to-luxury-gold/50"></span>
+            </span>
           </h1>
           {/* 平台统计 */}
           <div className="hidden md:flex items-center gap-1 glass rounded-xl px-4 py-2 border border-white/5">
