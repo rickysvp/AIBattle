@@ -21,18 +21,16 @@ const ConnectWalletModal: React.FC<ConnectWalletModalProps> = ({ isOpen, onClose
     }
   };
 
-  const handleConnect = (type: 'twitter' | 'google' | 'wallet') => {
+  const handleConnect = async (type: 'twitter' | 'google' | 'wallet') => {
     setLoadingType(type);
     setStep('loading');
-    
-    // 立即执行登录，但显示加载状态
-    setTimeout(() => {
-      onConnect(nickname.trim(), type);
-      setNickname('');
-      setStep('nickname');
-      setLoadingType('');
-      onClose();
-    }, 500); // 短暂延迟让用户看到加载效果
+
+    // 立即执行登录
+    await onConnect(nickname.trim(), type);
+    setNickname('');
+    setStep('nickname');
+    setLoadingType('');
+    onClose();
   };
 
   const handleClose = () => {
