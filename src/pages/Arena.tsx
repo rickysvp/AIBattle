@@ -262,9 +262,12 @@ const Arena: React.FC = () => {
 
         // 获取战斗结束时的实际结果（基于余额）
         const battleEndState = useGameStore.getState();
+        console.log('[Settlement] selectedParticipants:', selectedParticipants.map(p => ({ id: p.id, name: p.name, balance: p.balance, status: p.status })));
+        console.log('[Settlement] myAgents:', battleEndState.myAgents.map(a => ({ id: a.id, name: a.name, balance: a.balance, status: a.status })));
         const results = selectedParticipants.map(p => {
           const currentAgent = battleEndState.myAgents.find(a => a.id === p.id) ||
                                battleEndState.systemAgents.find(a => a.id === p.id);
+          console.log(`[Settlement] Agent ${p.name}: selected balance=${p.balance}, current balance=${currentAgent?.balance}, status=${currentAgent?.status}`);
           // 有余额的Agent存活，余额为0的被淘汰
           const survived = currentAgent ? currentAgent.balance > 0 : false;
           // 计算实际收益（基于余额变化）
@@ -318,6 +321,7 @@ const Arena: React.FC = () => {
             // 有余额的Agent恢复为in_arena状态，余额为0的保持eliminated
             const finalStatus = finalAgent.balance > 0 ? 'in_arena' : 'eliminated';
             
+            console.log(`[Settlement] Updating ${finalAgent.name}: finalStatus=${finalStatus}, balance=${finalAgent.balance}`);
             updateParticipant(finalAgent.id, {
               status: finalStatus,
               hp: finalAgent.maxHp,
@@ -331,6 +335,10 @@ const Arena: React.FC = () => {
             });
           }
         });
+        
+        // 结算后检查状态
+        const afterSettlementState = useGameStore.getState();
+        console.log('[Settlement] After settlement:', afterSettlementState.myAgents.map(a => ({ id: a.id, name: a.name, balance: a.balance, status: a.status })));
 
         // 3秒倒计时后关闭结算层
         for (let i = 3; i > 0; i--) {
