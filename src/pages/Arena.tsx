@@ -292,20 +292,19 @@ const Arena: React.FC = () => {
           const isWin = r.survived && r.profit > 0;
           const isLoss = !r.survived || r.profit < 0;
           
-          // 获取当前Agent的完整数据
-          const currentAgent = useGameStore.getState().myAgents.find(a => a.id === r.agent.id) ||
-                               useGameStore.getState().systemAgents.find(a => a.id === r.agent.id);
+          // r.agent 已经是战斗结束后的最新数据
+          const finalAgent = r.agent;
           
-          if (currentAgent) {
-            const newWins = isWin ? currentAgent.wins + 1 : currentAgent.wins;
-            const newLosses = isLoss ? currentAgent.losses + 1 : currentAgent.losses;
-            const newTotalBattles = currentAgent.totalBattles + 1;
+          if (finalAgent) {
+            const newWins = isWin ? finalAgent.wins + 1 : finalAgent.wins;
+            const newLosses = isLoss ? finalAgent.losses + 1 : finalAgent.losses;
+            const newTotalBattles = finalAgent.totalBattles + 1;
             const newWinRate = Math.round((newWins / newTotalBattles) * 100);
-            const newNetProfit = currentAgent.netProfit + r.profit;
+            const newNetProfit = finalAgent.netProfit + r.profit;
             
             // 添加战斗记录
             const battleRecord = {
-              id: `battle-${Date.now()}-${r.agent.id}`,
+              id: `battle-${Date.now()}-${finalAgent.id}`,
               timestamp: Date.now(),
               opponent: 'Arena Battle',
               result: isWin ? 'win' : 'loss' as 'win' | 'loss',
@@ -316,25 +315,19 @@ const Arena: React.FC = () => {
               isTournament: false,
             };
             
-            // 确保使用战斗结束时的最终余额
-            const finalBalance = r.agent.balance;
+            // 有余额的Agent恢复为in_arena状态，余额为0的保持eliminated
+            const finalStatus = finalAgent.balance > 0 ? 'in_arena' : 'eliminated';
             
-            updateParticipant(r.agent.id, {
-              status: r.survived ? 'in_arena' : 'eliminated',
-              hp: r.agent.maxHp,
-              balance: finalBalance,
+            updateParticipant(finalAgent.id, {
+              status: finalStatus,
+              hp: finalAgent.maxHp,
+              balance: finalAgent.balance,
               wins: newWins,
               losses: newLosses,
               totalBattles: newTotalBattles,
               winRate: newWinRate,
               netProfit: newNetProfit,
-              battleHistory: [battleRecord, ...currentAgent.battleHistory].slice(0, 50),
-            });
-          } else {
-            // 系统Agent简单更新
-            updateParticipant(r.agent.id, {
-              status: r.survived ? 'in_arena' : 'eliminated',
-              hp: r.agent.maxHp,
+              battleHistory: [battleRecord, ...finalAgent.battleHistory].slice(0, 50),
             });
           }
         });
