@@ -100,9 +100,9 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
           borderColor: 'border-luxury-rose/30',
           dotColor: 'bg-luxury-rose'
         };
-      case 'dead': 
+      case 'eliminated': 
         return { 
-          label: '阵亡', 
+          label: '已淘汰', 
           color: 'text-gray-500',
           bgColor: 'bg-gray-500/10',
           borderColor: 'border-gray-500/30',
@@ -195,8 +195,8 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
             {agent.status === 'fighting' && (
               <span className="text-[10px] text-luxury-rose">战斗中</span>
             )}
-            {agent.status === 'dead' && (
-              <span className="text-[10px] text-gray-500">阵亡</span>
+            {agent.status === 'eliminated' && (
+              <span className="text-[10px] text-gray-500">已淘汰</span>
             )}
           </div>
         </div>
@@ -392,9 +392,9 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
                   战斗中
                 </span>
               )}
-              {agent.status === 'dead' && (
+              {agent.status === 'eliminated' && (
                 <span className="px-2 py-1 rounded-lg bg-gray-500/10 text-gray-500 text-xs font-medium">
-                  阵亡
+                  已淘汰
                 </span>
               )}
             </div>

@@ -62,7 +62,7 @@ export interface DatabaseAgent {
   tournament_wins: number;
   tournament_top3: number;
   // 状态
-  status: 'idle' | 'in_arena' | 'fighting' | 'dead';
+  status: 'idle' | 'in_arena' | 'fighting' | 'eliminated';
   is_player: boolean;
   rarity?: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
   created_at: string;

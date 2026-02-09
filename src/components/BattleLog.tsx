@@ -51,9 +51,9 @@ const BattleLog: React.FC<BattleLogProps> = ({ logs, maxHeight = '300px', isOver
           bgColor: 'bg-luxury-amber/10',
           borderColor: 'border-luxury-amber/20'
         };
-      case 'kill': 
-        return { 
-          icon: Skull, 
+      case 'eliminate':
+        return {
+          icon: Skull,
           color: 'text-luxury-rose',
           bgColor: 'bg-luxury-rose/10',
           borderColor: 'border-luxury-rose/20'

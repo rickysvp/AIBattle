@@ -1661,7 +1661,7 @@ export const useGameStore = create<GameStore>()(
       const log: BattleLog = {
         id: `autobattle-${Date.now()}`,
         timestamp: Date.now(),
-        type: 'kill',
+        type: 'eliminate',
         attacker: winner,
         defender: selectedAgents.find(p => p.id !== winner.id) || selectedAgents[0],
         message: `[AutoBattle] ${winner.name} 赢得了战斗！获得 ${winner.balance.toFixed(0)} MON`,

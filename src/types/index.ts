@@ -44,7 +44,7 @@ export interface Agent {
   // 历史记录
   battleHistory: BattleRecord[];
   // 状态
-  status: 'idle' | 'in_arena' | 'fighting' | 'dead';
+  status: 'idle' | 'in_arena' | 'fighting' | 'eliminated';
   position?: { x: number; y: number };
   isPlayer: boolean;
   pixelStyle: number; // 像素风格变体
@@ -70,7 +70,7 @@ export interface BattleRecord {
 export interface BattleLog {
   id: string;
   timestamp: number;
-  type: 'attack' | 'kill' | 'damage' | 'round_start' | 'round_end' | 'join' | 'leave';
+  type: 'attack' | 'eliminate' | 'damage' | 'round_start' | 'round_end' | 'join' | 'leave';
   attacker?: Agent;
   defender?: Agent;
   damage?: number;

@@ -213,7 +213,7 @@ const Squad: React.FC = () => {
           return winRateB - winRateA;
         }
         case 'status': {
-          const statusOrder = { idle: 0, in_arena: 1, fighting: 2, dead: 3 };
+          const statusOrder = { idle: 0, in_arena: 1, fighting: 2, eliminated: 3 };
           return statusOrder[a.status] - statusOrder[b.status];
         }
         default:
@@ -670,7 +670,7 @@ const SquadAgentRow: React.FC<SquadAgentRowProps> = ({
     idle: { label: '空闲', color: 'text-luxury-cyan', bg: 'bg-luxury-cyan/10', border: 'border-luxury-cyan/30' },
     in_arena: { label: '待战', color: 'text-luxury-gold', bg: 'bg-luxury-gold/10', border: 'border-luxury-gold/30' },
     fighting: { label: '战斗中', color: 'text-luxury-rose', bg: 'bg-luxury-rose/10', border: 'border-luxury-rose/30' },
-    dead: { label: '阵亡', color: 'text-gray-500', bg: 'bg-gray-500/10', border: 'border-gray-500/30' },
+    eliminated: { label: '已淘汰', color: 'text-gray-500', bg: 'bg-gray-500/10', border: 'border-gray-500/30' },
   };
   
   const status = statusConfig[agent.status];
@@ -874,8 +874,8 @@ const SquadAgentRow: React.FC<SquadAgentRowProps> = ({
               {agent.status === 'fighting' && (
                 <span className="text-xs text-luxury-rose">战斗中</span>
               )}
-              {agent.status === 'dead' && (
-                <span className="text-xs text-gray-500">阵亡</span>
+              {agent.status === 'eliminated' && (
+                <span className="text-xs text-gray-500">已淘汰</span>
               )}
             </div>
           </div>

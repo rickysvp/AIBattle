@@ -318,7 +318,7 @@ const Arena: React.FC = () => {
             const finalBalance = r.agent.balance;
             
             updateParticipant(r.agent.id, {
-              status: r.survived ? 'in_arena' : 'dead',
+              status: r.survived ? 'in_arena' : 'eliminated',
               hp: r.agent.maxHp,
               balance: finalBalance,
               wins: newWins,
@@ -331,7 +331,7 @@ const Arena: React.FC = () => {
           } else {
             // 系统Agent简单更新
             updateParticipant(r.agent.id, {
-              status: r.survived ? 'in_arena' : 'dead',
+              status: r.survived ? 'in_arena' : 'eliminated',
               hp: r.agent.maxHp,
             });
           }

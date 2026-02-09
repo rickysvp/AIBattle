@@ -192,13 +192,17 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
         }]);
 
         // 更新目标余额（减少）
-        updateParticipant(target.id, { balance: newTargetBalance, status: newTargetBalance <= 0 ? 'dead' : 'fighting' });
+        const isEliminated = newTargetBalance <= 0;
+        updateParticipant(target.id, { 
+          balance: newTargetBalance, 
+          status: isEliminated ? 'eliminated' : 'fighting' 
+        });
 
         // 更新攻击者余额（增加）
         updateParticipant(latestAttacker.id, { balance: newAttackerBalance });
 
-        // 击杀效果
-        if (newTargetBalance <= 0) {
+        // 淘汰效果
+        if (isEliminated) {
           setExplosions(prev => [...prev, {
             id: Math.random().toString(36).substr(2, 9),
             x: targetPos.x,
@@ -207,13 +211,12 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
           }]);
 
           addBattleLog({
-            type: 'kill',
+            type: 'eliminate',
             attacker: latestAttacker,
             defender: latestTarget,
-            message: `${latestAttacker.name} 击杀了 ${latestTarget.name}！`,
+            message: `${latestAttacker.name} 淘汰了 ${latestTarget.name}！`,
             isHighlight: true,
           });
-          updateParticipant(latestAttacker.id, { kills: latestAttacker.kills + 1 });
         } else {
           addBattleLog({
             type: 'attack',
