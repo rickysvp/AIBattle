@@ -26,41 +26,46 @@ interface AgentCardProps {
 }
 
 // 稀有度配置
-const rarityConfig: Record<Rarity, { name: string; color: string; bgColor: string; borderColor: string; icon: React.ElementType }> = {
+const rarityConfig: Record<Rarity, { name: string; color: string; bgColor: string; borderColor: string; icon: React.ElementType; glowColor: string }> = {
   common: { 
     name: '普通', 
     color: '#9ca3af', 
     bgColor: 'bg-gray-500/10', 
     borderColor: 'border-gray-500/30',
-    icon: Sparkles
+    icon: Sparkles,
+    glowColor: 'rgba(156, 163, 175, 0.4)'
   },
   rare: { 
     name: '稀有', 
     color: '#3b82f6', 
     bgColor: 'bg-blue-500/10', 
     borderColor: 'border-blue-500/30',
-    icon: Gem
+    icon: Gem,
+    glowColor: 'rgba(59, 130, 246, 0.4)'
   },
   epic: { 
     name: '史诗', 
     color: '#a855f7', 
     bgColor: 'bg-purple-500/10', 
     borderColor: 'border-purple-500/30',
-    icon: Zap
+    icon: Zap,
+    glowColor: 'rgba(168, 85, 247, 0.5)'
   },
   legendary: { 
     name: '传说', 
     color: '#f59e0b', 
     bgColor: 'bg-amber-500/10', 
     borderColor: 'border-amber-500/30',
-    icon: Trophy
+    icon: Trophy,
+    glowColor: 'rgba(245, 158, 11, 0.5)'
   },
   mythic: { 
     name: '神话', 
     color: '#ef4444', 
     bgColor: 'bg-red-500/10', 
     borderColor: 'border-red-500/30',
-    icon: Flame
+    icon: Flame,
+    glowColor: 'rgba(239, 68, 68, 0.5)'
   },
 };
 
@@ -77,6 +82,7 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
           color: 'text-luxury-cyan',
           bgColor: 'bg-luxury-cyan/10',
           borderColor: 'border-luxury-cyan/30',
+          dotColor: 'bg-luxury-cyan'
         };
       case 'in_arena': 
         return { 
@@ -84,6 +90,7 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
           color: 'text-luxury-gold',
           bgColor: 'bg-luxury-gold/10',
           borderColor: 'border-luxury-gold/30',
+          dotColor: 'bg-luxury-gold'
         };
       case 'fighting': 
         return { 
@@ -91,6 +98,7 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
           color: 'text-luxury-rose',
           bgColor: 'bg-luxury-rose/10',
           borderColor: 'border-luxury-rose/30',
+          dotColor: 'bg-luxury-rose'
         };
       case 'dead': 
         return { 
@@ -98,6 +106,7 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
           color: 'text-gray-500',
           bgColor: 'bg-gray-500/10',
           borderColor: 'border-gray-500/30',
+          dotColor: 'bg-gray-500'
         };
       default: 
         return { 
@@ -105,6 +114,7 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
           color: 'text-gray-400',
           bgColor: 'bg-gray-400/10',
           borderColor: 'border-gray-400/30',
+          dotColor: 'bg-gray-400'
         };
     }
   };
@@ -197,18 +207,18 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
     );
   }
 
-  // 列表视图 - 极简紧凑版 (Updated for user request: Status dot, Combined info)
+  // 列表视图 - 重新设计
   if (viewMode === 'list') {
     return (
       <>
         <div 
-          className={`flex items-center gap-2 px-2 py-1.5 bg-white/5 rounded-lg border border-white/5 hover:border-white/10 hover:bg-white/10 transition-all cursor-pointer group ${compact ? 'text-xs' : 'text-sm'}`}
+          className="flex items-center gap-3 px-3 py-2.5 bg-white/[0.03] rounded-xl border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.05] transition-all cursor-pointer group"
           onClick={() => setIsDetailOpen(true)}
         >
-          {/* Agent 头像 */}
+          {/* Agent 头像 - 带余额标签 */}
           <div className="relative flex-shrink-0">
             <div 
-              className="w-8 h-8 rounded-lg overflow-hidden border border-white/10"
+              className="w-10 h-10 rounded-lg overflow-hidden border-2"
               style={{ borderColor: rarity.color }}
             >
               {agent.image ? (
@@ -218,60 +228,87 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-black/20 flex items-center justify-center">
-                   <PixelAgent agent={agent} size={20} />
+                <div className="w-full h-full bg-black/30 flex items-center justify-center">
+                   <PixelAgent agent={agent} size={24} />
                 </div>
               )}
             </div>
-            {/* 状态小圆点 */}
-            <div className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-black ${
-               agent.status === 'in_arena' ? 'bg-green-500' : 
-               agent.status === 'fighting' ? 'bg-red-500' : 'bg-gray-500'
-            }`} />
+            {/* 状态指示器 */}
+            <div 
+              className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-void ${status.dotColor}`}
+            />
           </div>
           
-          {/* 名称和稀有度 */}
-          <div className="flex-1 min-w-0 flex flex-col justify-center">
-            <div className="flex items-center gap-1.5">
-               <span className="font-medium text-white/90 truncate max-w-[80px]" style={{ color: rarity.color }}>{agent.name}</span>
-               <span className="text-[9px] px-1 rounded-sm bg-white/5 text-white/40">#{agent.nftId}</span>
+          {/* 主要信息区 */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="font-medium text-white text-sm truncate">{agent.name}</span>
+              <span className="text-[10px] text-white/30 font-mono">#{agent.nftId}</span>
             </div>
-            <div className="flex items-center gap-2 text-[10px]">
-              <span className={agent.balance > 0 ? 'text-luxury-gold' : 'text-red-400'}>
-                 ${agent.balance.toFixed(0)}
-              </span>
-              <span className={`font-mono ${agent.netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                ({agent.netProfit >= 0 ? '+' : ''}{agent.netProfit})
-              </span>
+            {/* 余额和盈利并排 */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <Wallet className="w-3 h-3 text-luxury-gold/70" />
+                <span className="text-xs font-mono font-semibold text-luxury-gold">
+                  {agent.balance.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <TrendingUp className={`w-3 h-3 ${agent.netProfit >= 0 ? 'text-luxury-green/70' : 'text-luxury-rose/70'}`} />
+                <span className={`text-xs font-mono font-medium ${agent.netProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
+                  {agent.netProfit >= 0 ? '+' : ''}{agent.netProfit.toLocaleString()}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* 状态文字 (替代盈亏列) */}
-          {/* <div className="text-right mr-1"> ... </div>  Removed separate profit column, moved to subtext */}
-          
-          {/* 极简操作按钮 */}
-          <div className="flex items-center gap-1">
-            {agent.status === 'idle' && (
-               <button
+          {/* 胜率和操作 */}
+          <div className="flex items-center gap-3">
+            {/* 胜率 */}
+            <div className="text-right hidden sm:block">
+              <div className="flex items-center gap-1 justify-end">
+                <Target className="w-3 h-3 text-white/40" />
+                <span className={`text-xs font-mono font-semibold ${
+                  agent.winRate >= 60 ? 'text-luxury-green' : 
+                  agent.winRate >= 40 ? 'text-luxury-amber' : 'text-luxury-rose'
+                }`}>
+                  {agent.winRate}%
+                </span>
+              </div>
+              <p className="text-[10px] text-white/30">{agent.totalBattles}场</p>
+            </div>
+
+            {/* 操作按钮 */}
+            <div className="flex items-center">
+              {agent.status === 'idle' && (
+                <button
                   onClick={(e) => { e.stopPropagation(); joinArena(agent.id); }}
-                  className="p-1.5 rounded-md bg-white/5 hover:bg-green-500/20 text-white/40 hover:text-green-400 transition-colors"
-                  title="加入"
-               >
-                 <Swords className="w-3.5 h-3.5" />
-               </button>
-            )}
-            {agent.status === 'in_arena' && (
-               <button
+                  className="p-2 rounded-lg bg-luxury-gold/10 hover:bg-luxury-gold/20 text-luxury-gold transition-colors"
+                  title="加入竞技场"
+                >
+                  <Swords className="w-4 h-4" />
+                </button>
+              )}
+              {agent.status === 'in_arena' && (
+                <button
                   onClick={(e) => { e.stopPropagation(); leaveArena(agent.id); }}
-                  className="p-1.5 rounded-md bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-colors"
-                  title="退出"
-               >
-                 <LogOut className="w-3.5 h-3.5" />
-               </button>
-            )}
-            {/* 状态文本提示 */}
-            {agent.status === 'fighting' && <span className="text-[10px] text-red-400">Fighting</span>}
-            {agent.status === 'dead' && <span className="text-[10px] text-gray-500">Dead</span>}
+                  className="p-2 rounded-lg bg-luxury-rose/10 hover:bg-luxury-rose/20 text-luxury-rose transition-colors"
+                  title="退出竞技场"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              )}
+              {agent.status === 'fighting' && (
+                <span className="px-2 py-1 rounded-lg bg-luxury-rose/10 text-luxury-rose text-xs font-medium">
+                  战斗中
+                </span>
+              )}
+              {agent.status === 'dead' && (
+                <span className="px-2 py-1 rounded-lg bg-gray-500/10 text-gray-500 text-xs font-medium">
+                  阵亡
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -288,57 +325,68 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
   return (
     <>
       <div 
-        className="card-luxury rounded-2xl overflow-hidden group cursor-pointer"
+        className="card-luxury rounded-2xl overflow-hidden group cursor-pointer relative"
         onClick={() => setIsDetailOpen(true)}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         style={{
-          borderColor: isHovered ? rarity.color : undefined,
+          borderColor: isHovered ? rarity.color : 'rgba(255, 255, 255, 0.05)',
           borderWidth: isHovered ? '2px' : '1px',
+          boxShadow: isHovered ? `0 20px 40px rgba(0, 0, 0, 0.4), 0 0 40px ${rarity.glowColor}` : undefined,
         }}
       >
-        {/* 头部 - 稀有度 + NFT编号 */}
+        {/* 顶部信息条 - 显示余额 */}
         <div 
-          className="px-4 py-1.5 flex items-center justify-between"
+          className="px-4 py-2 flex items-center justify-between"
           style={{ 
-            background: `linear-gradient(90deg, ${rarity.color}20, ${rarity.color}05)`,
+            background: `linear-gradient(90deg, ${rarity.color}25, ${rarity.color}08)`,
+            borderBottom: `1px solid ${rarity.color}30`
           }}
         >
-          <div className="flex items-center gap-1.5">
-            <RarityIcon className="w-3.5 h-3.5" style={{ color: rarity.color }} />
-            <span className="text-xs font-medium" style={{ color: rarity.color }}>
-              {rarity.name}
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-6 h-6 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: `${rarity.color}30` }}
+            >
+              <RarityIcon className="w-3.5 h-3.5" style={{ color: rarity.color }} />
+            </div>
+            <span className="text-xs text-luxury-gold font-mono font-semibold">
+              ${agent.balance.toLocaleString()}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-white/30">
+            <span className="text-xs text-white/40 font-mono">
               #{agent.nftId}
             </span>
-            <span className={`text-xs px-1.5 py-0.5 rounded ${status.bgColor} ${status.color}`}>
-              {status.label}
-            </span>
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${status.bgColor} ${status.borderColor} border`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${status.dotColor} ${agent.status === 'fighting' ? 'animate-pulse' : ''}`} />
+              <span className={`text-[10px] font-medium ${status.color}`}>
+                {status.label}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Agent信息 */}
         <div className="p-4">
-          {/* 头部：头像 + 名称/编号 + 核心数据 */}
-          <div className="flex items-start gap-3 mb-4">
+          {/* 头部：头像 + 名称 */}
+          <div className="flex items-start gap-4 mb-4">
             {/* Agent 头像 */}
             <div className="relative flex-shrink-0">
               <div 
-                className="absolute inset-0 blur-xl rounded-full transition-all duration-300"
+                className="absolute inset-0 blur-2xl rounded-full transition-all duration-500"
                 style={{ 
                   backgroundColor: rarity.color,
-                  opacity: isHovered ? 0.6 : 0.3,
-                  transform: isHovered ? 'scale(1.2)' : 'scale(1)'
+                  opacity: isHovered ? 0.7 : 0.4,
+                  transform: isHovered ? 'scale(1.3)' : 'scale(1)'
                 }}
               />
               <div 
-                className="relative w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden"
+                className="relative w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden"
                 style={{ 
-                  background: `linear-gradient(135deg, ${rarity.color}30, ${rarity.color}50)`,
-                  border: `2px solid ${rarity.color}`
+                  background: `linear-gradient(135deg, ${rarity.color}40, ${rarity.color}60)`,
+                  border: `2px solid ${rarity.color}`,
+                  boxShadow: `0 0 20px ${rarity.glowColor}`
                 }}
               >
                 {agent.image ? (
@@ -353,30 +401,35 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
                     }}
                   />
                 ) : (
-                  <PixelAgent agent={agent} size={40} />
+                  <PixelAgent agent={agent} size={48} />
                 )}
                 {/* 图片加载失败时的备用显示 */}
                 <div className="pixel-fallback hidden absolute inset-0 flex items-center justify-center">
-                  <PixelAgent agent={agent} size={40} />
+                  <PixelAgent agent={agent} size={48} />
                 </div>
               </div>
             </div>
             
             <div className="flex-1 min-w-0">
-              {/* 名称和编号 */}
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="text-base font-bold text-white truncate">{agent.name}</h4>
-                <span className="text-xs text-white/40 font-mono">#{agent.nftId}</span>
-              </div>
+              <h4 className="text-lg font-bold text-white truncate mb-2">{agent.name}</h4>
               
-              {/* 余额和盈亏 - 突出显示 */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 px-2 py-1 bg-luxury-gold/10 rounded-lg border border-luxury-gold/20" title="钱包余额">
+              {/* 余额和盈亏 */}
+              <div className="flex items-center gap-2">
+                <div 
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border"
+                  style={{ 
+                    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                    borderColor: 'rgba(255, 215, 0, 0.25)'
+                  }}
+                  title="钱包余额"
+                >
                   <Wallet className="w-3.5 h-3.5 text-luxury-gold" />
-                  <span className="text-sm font-mono font-bold text-luxury-gold">{agent.balance.toFixed(0)}</span>
-                  <span className="text-xs text-luxury-gold/60">MON</span>
+                  <span className="text-sm font-mono font-bold text-luxury-gold">{agent.balance.toLocaleString()}</span>
                 </div>
-                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border ${agent.netProfit >= 0 ? 'bg-luxury-green/10 border-luxury-green/20' : 'bg-luxury-rose/10 border-luxury-rose/20'}`} title="累计盈亏">
+                <div 
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${agent.netProfit >= 0 ? 'bg-luxury-green/10 border-luxury-green/25' : 'bg-luxury-rose/10 border-luxury-rose/25'}`}
+                  title="累计盈亏"
+                >
                   <TrendingUp className={`w-3.5 h-3.5 ${agent.netProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`} />
                   <span className={`text-sm font-mono font-bold ${agent.netProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
                     {agent.netProfit >= 0 ? '+' : ''}{agent.netProfit.toLocaleString()}
@@ -386,61 +439,98 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
             </div>
           </div>
 
-          {/* 关键战绩数据 - 网格布局更突出 */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <div className="bg-void-light/30 rounded-xl p-2.5 text-center border border-white/5 hover:border-luxury-cyan/30 transition-colors" title="参与场数">
+          {/* 关键战绩数据 */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div 
+              className="rounded-xl p-3 text-center border transition-all duration-300 hover:scale-105"
+              style={{ 
+                backgroundColor: 'rgba(6, 182, 212, 0.08)',
+                borderColor: 'rgba(6, 182, 212, 0.2)'
+              }}
+              title="参与场数"
+            >
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Swords className="w-3.5 h-3.5 text-luxury-cyan" />
-                <span className="text-xs text-white/50">场数</span>
               </div>
-              <span className="text-lg font-mono font-bold text-white">{agent.totalBattles}</span>
+              <span className="text-xl font-mono font-bold text-white">{agent.totalBattles}</span>
+              <p className="text-[10px] text-white/40 mt-0.5">场数</p>
             </div>
-            <div className="bg-void-light/30 rounded-xl p-2.5 text-center border border-white/5 hover:border-luxury-amber/30 transition-colors" title="胜率">
+            <div 
+              className="rounded-xl p-3 text-center border transition-all duration-300 hover:scale-105"
+              style={{ 
+                backgroundColor: agent.winRate >= 60 ? 'rgba(34, 197, 94, 0.08)' : agent.winRate >= 40 ? 'rgba(245, 158, 11, 0.08)' : 'rgba(244, 63, 94, 0.08)',
+                borderColor: agent.winRate >= 60 ? 'rgba(34, 197, 94, 0.2)' : agent.winRate >= 40 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(244, 63, 94, 0.2)'
+              }}
+              title="胜率"
+            >
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Target className={`w-3.5 h-3.5 ${agent.winRate >= 60 ? 'text-luxury-green' : agent.winRate >= 40 ? 'text-luxury-amber' : 'text-luxury-rose'}`} />
-                <span className="text-xs text-white/50">胜率</span>
               </div>
-              <span className={`text-lg font-mono font-bold ${agent.winRate >= 60 ? 'text-luxury-green' : agent.winRate >= 40 ? 'text-luxury-amber' : 'text-luxury-rose'}`}>
+              <span className={`text-xl font-mono font-bold ${agent.winRate >= 60 ? 'text-luxury-green' : agent.winRate >= 40 ? 'text-luxury-amber' : 'text-luxury-rose'}`}>
                 {agent.winRate}%
               </span>
+              <p className="text-[10px] text-white/40 mt-0.5">胜率</p>
             </div>
-            <div className="bg-void-light/30 rounded-xl p-2.5 text-center border border-white/5 hover:border-luxury-gold/30 transition-colors" title="锦标赛冠军">
+            <div 
+              className="rounded-xl p-3 text-center border transition-all duration-300 hover:scale-105"
+              style={{ 
+                backgroundColor: 'rgba(255, 215, 0, 0.08)',
+                borderColor: 'rgba(255, 215, 0, 0.2)'
+              }}
+              title="锦标赛冠军"
+            >
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Trophy className="w-3.5 h-3.5 text-luxury-gold" />
-                <span className="text-xs text-white/50">冠军</span>
               </div>
-              <span className="text-lg font-mono font-bold text-luxury-gold">{agent.tournamentWins}</span>
+              <span className="text-xl font-mono font-bold text-luxury-gold">{agent.tournamentWins}</span>
+              <p className="text-[10px] text-white/40 mt-0.5">冠军</p>
             </div>
           </div>
 
-          {/* 属性展示 - 更紧凑 */}
-          <div className="bg-void-light/10 rounded-xl p-2.5">
-            <div className="grid grid-cols-5 gap-1">
-              <div className="text-center" title="攻击">
-                <Zap className="w-3.5 h-3.5 mx-auto text-luxury-rose mb-0.5" />
-                <p className="text-xs font-mono text-luxury-rose">{agent.attack}</p>
+          {/* 属性展示 */}
+          <div 
+            className="rounded-xl p-3 border"
+            style={{ 
+              backgroundColor: 'rgba(255, 255, 255, 0.03)',
+              borderColor: 'rgba(255, 255, 255, 0.08)'
+            }}
+          >
+            <div className="grid grid-cols-5 gap-2">
+              <div className="text-center group/stat" title="攻击">
+                <div className="w-7 h-7 mx-auto rounded-lg bg-luxury-rose/10 flex items-center justify-center mb-1 group-hover/stat:bg-luxury-rose/20 transition-colors">
+                  <Zap className="w-3.5 h-3.5 text-luxury-rose" />
+                </div>
+                <p className="text-sm font-mono font-bold text-luxury-rose">{agent.attack}</p>
               </div>
-              <div className="text-center" title="防御">
-                <Shield className="w-3.5 h-3.5 mx-auto text-luxury-cyan mb-0.5" />
-                <p className="text-xs font-mono text-luxury-cyan">{agent.defense}</p>
+              <div className="text-center group/stat" title="防御">
+                <div className="w-7 h-7 mx-auto rounded-lg bg-luxury-cyan/10 flex items-center justify-center mb-1 group-hover/stat:bg-luxury-cyan/20 transition-colors">
+                  <Shield className="w-3.5 h-3.5 text-luxury-cyan" />
+                </div>
+                <p className="text-sm font-mono font-bold text-luxury-cyan">{agent.defense}</p>
               </div>
-              <div className="text-center" title="暴击率">
-                <Flame className="w-3.5 h-3.5 mx-auto text-luxury-amber mb-0.5" />
-                <p className="text-xs font-mono text-luxury-amber">{agent.critRate}</p>
+              <div className="text-center group/stat" title="暴击率">
+                <div className="w-7 h-7 mx-auto rounded-lg bg-luxury-amber/10 flex items-center justify-center mb-1 group-hover/stat:bg-luxury-amber/20 transition-colors">
+                  <Flame className="w-3.5 h-3.5 text-luxury-amber" />
+                </div>
+                <p className="text-sm font-mono font-bold text-luxury-amber">{agent.critRate}</p>
               </div>
-              <div className="text-center" title="速度">
-                <Wind className="w-3.5 h-3.5 mx-auto text-luxury-green mb-0.5" />
-                <p className="text-xs font-mono text-luxury-green">{agent.speed}</p>
+              <div className="text-center group/stat" title="速度">
+                <div className="w-7 h-7 mx-auto rounded-lg bg-luxury-green/10 flex items-center justify-center mb-1 group-hover/stat:bg-luxury-green/20 transition-colors">
+                  <Wind className="w-3.5 h-3.5 text-luxury-green" />
+                </div>
+                <p className="text-sm font-mono font-bold text-luxury-green">{agent.speed}</p>
               </div>
-              <div className="text-center" title="幸运">
-                <Sparkles className="w-3.5 h-3.5 mx-auto text-luxury-purple mb-0.5" />
-                <p className="text-xs font-mono text-luxury-purple">{agent.luck}</p>
+              <div className="text-center group/stat" title="幸运">
+                <div className="w-7 h-7 mx-auto rounded-lg bg-luxury-purple/10 flex items-center justify-center mb-1 group-hover/stat:bg-luxury-purple/20 transition-colors">
+                  <Sparkles className="w-3.5 h-3.5 text-luxury-purple" />
+                </div>
+                <p className="text-sm font-mono font-bold text-luxury-purple">{agent.luck}</p>
               </div>
             </div>
           </div>
           
-          {/* 操作提示 */}
-          <div className="flex items-center justify-center gap-2 text-white/30 text-xs">
+          {/* 底部操作提示 */}
+          <div className="flex items-center justify-center gap-2 text-white/30 text-xs mt-3">
             <Info className="w-3 h-3" />
             <span>点击查看详情</span>
           </div>

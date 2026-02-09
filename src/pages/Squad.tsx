@@ -258,51 +258,63 @@ const Squad: React.FC = () => {
   return (
     <div className="min-h-screen bg-void pt-24 pb-24">
       <div className="max-w-screen-xl mx-auto px-4">
-        {/* 统计概览 */}
+        {/* 统计概览 - 优化视觉层次 */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
-          <div className="card-luxury rounded-2xl p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-luxury-purple/10 border border-luxury-purple/20 flex items-center justify-center">
-                <Users className="w-5 h-5 text-luxury-purple" />
+          <div className="card-luxury rounded-2xl p-5 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-luxury-purple/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-luxury-purple/10 border border-luxury-purple/20 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-luxury-purple" />
+                </div>
+                <span className="text-xs text-white/40 uppercase tracking-wider">{t('squad.agents')}</span>
               </div>
-              <span className="text-xs text-white/40 uppercase tracking-wider">{t('squad.agents')}</span>
+              <p className="text-3xl font-bold text-white font-display">{myAgents.length}</p>
             </div>
-            <p className="text-3xl font-bold text-white font-display">{myAgents.length}</p>
           </div>
 
-          <div className="card-luxury rounded-2xl p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-luxury-gold/10 border border-luxury-gold/20 flex items-center justify-center">
-                <Lock className="w-5 h-5 text-luxury-gold" />
+          <div className="card-luxury rounded-2xl p-5 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-luxury-gold/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-luxury-gold/10 border border-luxury-gold/20 flex items-center justify-center">
+                  <Lock className="w-5 h-5 text-luxury-gold" />
+                </div>
+                <span className="text-xs text-white/40 uppercase tracking-wider">{t('wallet.locked')}</span>
               </div>
-              <span className="text-xs text-white/40 uppercase tracking-wider">{t('wallet.locked')}</span>
+              <p className="text-3xl font-bold text-luxury-gold font-mono">{agentsTotalBalance.toLocaleString()}</p>
             </div>
-            <p className="text-3xl font-bold text-luxury-gold font-mono">{agentsTotalBalance.toLocaleString()}</p>
           </div>
 
-          <div className="card-luxury rounded-2xl p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-luxury-green/10 border border-luxury-green/20 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-luxury-green" />
+          <div className="card-luxury rounded-2xl p-5 relative overflow-hidden group">
+            <div className={`absolute inset-0 bg-gradient-to-br ${totalProfit >= 0 ? 'from-luxury-green/5' : 'from-luxury-rose/5'} to-transparent opacity-0 group-hover:opacity-100 transition-opacity`} />
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-10 h-10 rounded-xl ${totalProfit >= 0 ? 'bg-luxury-green/10 border-luxury-green/20' : 'bg-luxury-rose/10 border-luxury-rose/20'} border flex items-center justify-center`}>
+                  <TrendingUp className={`w-5 h-5 ${totalProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`} />
+                </div>
+                <span className="text-xs text-white/40 uppercase tracking-wider">{t('squad.totalProfit')}</span>
               </div>
-              <span className="text-xs text-white/40 uppercase tracking-wider">{t('squad.totalProfit')}</span>
+              <p className={`text-3xl font-bold font-mono ${totalProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
+                {totalProfit >= 0 ? '+' : ''}{totalProfit.toLocaleString()}
+              </p>
+              <p className={`text-sm mt-1 ${profitPercentage >= 0 ? 'text-luxury-green/70' : 'text-luxury-rose/70'}`}>
+                {profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(2)}%
+              </p>
             </div>
-            <p className={`text-3xl font-bold font-mono ${totalProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
-              {totalProfit >= 0 ? '+' : ''}{totalProfit.toLocaleString()}
-            </p>
-            <p className={`text-sm mt-1 ${profitPercentage >= 0 ? 'text-luxury-green/70' : 'text-luxury-rose/70'}`}>
-              {profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(2)}%
-            </p>
           </div>
 
-          <div className="card-luxury rounded-2xl p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-luxury-cyan/10 border border-luxury-cyan/20 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-luxury-cyan" />
+          <div className="card-luxury rounded-2xl p-5 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-luxury-cyan/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-luxury-cyan/10 border border-luxury-cyan/20 flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-luxury-cyan" />
+                </div>
+                <span className="text-xs text-white/40 uppercase tracking-wider">{t('squad.avgWinRate')}</span>
               </div>
-              <span className="text-xs text-white/40 uppercase tracking-wider">{t('squad.avgWinRate')}</span>
+              <p className="text-3xl font-bold text-luxury-cyan font-mono">{avgWinRate}%</p>
             </div>
-            <p className="text-3xl font-bold text-luxury-cyan font-mono">{avgWinRate}%</p>
           </div>
         </div>
 
@@ -573,7 +585,7 @@ const Squad: React.FC = () => {
           )}
         </div>
 
-        {/* Agents 网格布局 */}
+        {/* Agents 网格布局 - 优化间距和响应式 */}
         {filteredAgents.length === 0 ? (
           <div className="card-luxury rounded-2xl p-16 text-center">
             <div className="w-24 h-24 rounded-3xl bg-void-light/50 border border-white/5 flex items-center justify-center mx-auto mb-6">
@@ -587,22 +599,25 @@ const Squad: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredAgents.map(agent => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5">
+            {filteredAgents.map((agent, index) => (
               <div
                 key={agent.id}
-                className={`relative transition-all ${
-                  selectedAgents.has(agent.id) ? 'ring-2 ring-luxury-cyan rounded-2xl' : ''
+                className={`relative transition-all duration-300 ${
+                  selectedAgents.has(agent.id) ? 'ring-2 ring-luxury-cyan rounded-2xl scale-[1.02]' : ''
                 }`}
+                style={{
+                  animationDelay: `${index * 50}ms`
+                }}
               >
-                {/* 批量选择按钮 */}
+                {/* 批量选择按钮 - 优化位置和样式 */}
                 {agent.status === 'idle' && showBatchPanel && (
                   <button
                     onClick={() => toggleAgentSelection(agent.id)}
-                    className={`absolute -top-2 -right-2 z-20 w-8 h-8 rounded-lg border-2 flex items-center justify-center shadow-lg transition-all ${
+                    className={`absolute -top-2 -right-2 z-20 w-8 h-8 rounded-xl border-2 flex items-center justify-center shadow-xl transition-all duration-200 ${
                       selectedAgents.has(agent.id)
-                        ? 'bg-luxury-cyan border-white'
-                        : 'bg-void-panel border-white/30 hover:border-luxury-cyan'
+                        ? 'bg-luxury-cyan border-white shadow-luxury-cyan/50'
+                        : 'bg-void-panel border-white/30 hover:border-luxury-cyan hover:shadow-lg'
                     }`}
                   >
                     {selectedAgents.has(agent.id) ? (

@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store/gameStore';
 import ArenaCanvas from '../components/ArenaCanvas';
 import BattleLog from '../components/BattleLog';
 import AgentCard from '../components/AgentCard';
 import { Agent } from '../types';
-import { Swords, Users, Trophy, Plus, Wallet, X, ChevronRight } from 'lucide-react';
+import { Trophy, Plus, Wallet, X, ChevronRight, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // 生成今日 TOP 100 排行榜数据
@@ -84,11 +83,9 @@ const Arena: React.FC = () => {
     addBattleLog,
     updateParticipant,
     setTop3,
-    myBattleLogs,
   } = useGameStore();
 
   const navigate = useNavigate();
-  const [logTab, setLogTab] = useState<'arena' | 'my'>('arena');
   const [showSettlement, setShowSettlement] = useState(false);
 
   // 当前战斗轮次显示（战斗开始时固定，战斗结束后更新）
@@ -451,10 +448,10 @@ const Arena: React.FC = () => {
                 {/* 结算弹窗 - 在竞技场画布内显示 */}
                 {showSettlement && arena.top3.length > 0 && (
                   <div className="absolute inset-0 z-50 flex items-center justify-center bg-void/90 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-void-panel/95 rounded-2xl overflow-hidden border border-white/10 max-w-[280px] w-[80%] animate-scale-in shadow-2xl">
+                    <div className="bg-void-panel/95 rounded-2xl overflow-hidden border border-white/10 max-w-[320px] w-[85%] animate-scale-in shadow-2xl">
                       {/* 头部 - 简洁显示轮次 */}
-                      <div className="px-4 py-2 bg-gradient-to-r from-luxury-gold/10 to-luxury-amber/5 border-b border-white/5 flex items-center justify-between">
-                        <span className="text-xs font-medium text-white/60">Round {displayBattleRound.toLocaleString()}</span>
+                      <div className="px-4 py-3 bg-gradient-to-r from-luxury-gold/10 to-luxury-amber/5 border-b border-white/5 flex items-center justify-between">
+                        <span className="text-sm font-medium text-white/60">Round {displayBattleRound.toLocaleString()}</span>
                         <button
                           onClick={() => setShowSettlement(false)}
                           className="p-1 rounded text-white/30 hover:text-white/60 transition-colors"
@@ -464,18 +461,18 @@ const Arena: React.FC = () => {
                       </div>
 
                       {/* TOP3 列表 - 简洁风格 */}
-                      <div className="p-3 space-y-2">
+                      <div className="p-4 space-y-3">
                         {arena.top3.map((result, index) => (
                           <div
                             key={result.agent.id}
-                            className={`flex items-center gap-3 p-2 rounded-xl ${
+                            className={`flex items-center gap-3 p-3 rounded-xl ${
                               index === 0 ? 'bg-luxury-gold/10 border border-luxury-gold/30' :
                               index === 1 ? 'bg-white/5 border border-white/10' :
                               'bg-white/5 border border-white/10'
                             }`}
                           >
                             {/* 排名数字 */}
-                            <div className={`w-5 h-5 rounded-lg flex items-center justify-center text-xs font-bold ${
+                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-sm font-bold ${
                               index === 0 ? 'bg-luxury-gold text-void' :
                               index === 1 ? 'bg-white/20 text-white' :
                               'bg-white/10 text-white/70'
@@ -484,7 +481,7 @@ const Arena: React.FC = () => {
                             </div>
 
                             {/* Agent 头像 */}
-                            <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 bg-void-light">
+                            <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-void-light">
                               {result.agent.image ? (
                                 <img
                                   src={result.agent.image}
@@ -497,23 +494,29 @@ const Arena: React.FC = () => {
                                   style={{ backgroundColor: result.agent.color }}
                                 />
                               )}
+                              {/* 余额标签 */}
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm py-0.5 px-1">
+                                <p className="text-[8px] font-mono text-luxury-gold text-center truncate">
+                                  ${result.agent.balance}
+                                </p>
+                              </div>
                             </div>
 
                             {/* Agent 信息 */}
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-white truncate">{result.agent.name}</p>
-                              <p className="text-[10px] text-white/40">#{result.agent.nftId || result.agent.id.slice(-4)}</p>
+                              <p className="text-sm font-medium text-white truncate">{result.agent.name}</p>
+                              <p className="text-xs text-white/40">#{result.agent.nftId || result.agent.id.slice(-4)}</p>
                             </div>
 
                             {/* 盈利 */}
                             <div className="text-right">
-                              <p className="text-xs font-bold font-mono text-luxury-green">+{result.profit}</p>
+                              <p className="text-sm font-bold font-mono text-luxury-green">+{result.profit}</p>
                             </div>
                           </div>
                         ))}
 
                         {/* 倒计时提示 */}
-                        <p id="settlement-countdown" className="text-center text-white/20 text-[10px] pt-1">
+                        <p id="settlement-countdown" className="text-center text-white/20 text-xs pt-2">
                           Next round in...
                         </p>
                       </div>
