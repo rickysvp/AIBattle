@@ -1505,10 +1505,10 @@ export const useGameStore = create<GameStore>()(
     const state = get();
     const { systemAgents, myAgents } = state;
 
-    // 获取所有在竞技场中的agents（包括用户的和系统的）
+    // 获取所有在竞技场中的agents（只选择in_arena状态的，避免与Canvas视觉战斗冲突）
     const allArenaAgents = [
-      ...myAgents.filter(a => a.status === 'in_arena' || a.status === 'fighting'),
-      ...systemAgents.filter(a => a.status === 'in_arena' || a.status === 'fighting'),
+      ...myAgents.filter(a => a.status === 'in_arena'),
+      ...systemAgents.filter(a => a.status === 'in_arena'),
     ];
 
     console.log('[AutoBattle] 检查战斗条件:', {
