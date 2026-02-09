@@ -375,12 +375,21 @@ export const useGameStore = create<GameStore>()(
   
   initializeArena: async () => {
     try {
+      // 重置所有 fighting 状态的 Agent 为 in_arena（防止页面刷新后状态不一致）
+      set((state) => ({
+        myAgents: state.myAgents.map(a => 
+          a.status === 'fighting' ? { ...a, status: 'in_arena' as const } : a
+        ),
+      }));
+      
       // 从 Supabase 获取系统 Agents
       const dbAgents = await AgentService.getSystemAgents(1000);
       
       if (dbAgents.length > 0) {
-        // 如果数据库已有系统 Agents，直接使用
-        const systemAgents = dbAgents.map(DataTransformers.toFrontendAgent);
+        // 如果数据库已有系统 Agents，直接使用（同时重置 fighting 状态）
+        const systemAgents = dbAgents.map(DataTransformers.toFrontendAgent).map(a => 
+          a.status === 'fighting' ? { ...a, status: 'in_arena' as const } : a
+        );
         set({ systemAgents });
         console.log(`[Arena] 从数据库加载 ${systemAgents.length} 个系统Agents`);
       } else {
