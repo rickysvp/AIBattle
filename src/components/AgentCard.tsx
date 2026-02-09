@@ -174,7 +174,8 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
 
           {/* 操作按钮 */}
           <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-            {agent.status === 'idle' && (
+            {/* 有余额且在idle/eliminated状态 - 显示加入竞技场按钮 */}
+            {(agent.status === 'idle' || agent.status === 'eliminated') && agent.balance > 0 && (
               <button
                 onClick={() => joinArena(agent.id)}
                 className="p-1.5 rounded-lg bg-luxury-gold/10 hover:bg-luxury-gold/20 text-luxury-gold transition-colors"
@@ -183,7 +184,8 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
                 <Swords className="w-3.5 h-3.5" />
               </button>
             )}
-            {agent.status === 'in_arena' && (
+            {/* 有余额且在in_arena状态 - 显示退出竞技场按钮 */}
+            {agent.status === 'in_arena' && agent.balance > 0 && (
               <button
                 onClick={() => leaveArena(agent.id)}
                 className="p-1.5 rounded-lg bg-luxury-rose/10 hover:bg-luxury-rose/20 text-luxury-rose transition-colors"
@@ -192,10 +194,12 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
                 <LogOut className="w-3.5 h-3.5" />
               </button>
             )}
+            {/* 战斗中状态 */}
             {agent.status === 'fighting' && (
               <span className="text-[10px] text-luxury-rose">战斗中</span>
             )}
-            {agent.status === 'eliminated' && (
+            {/* 无余额状态 - 显示充值按钮 */}
+            {agent.balance <= 0 && (
               <span className="text-[10px] text-gray-500">已淘汰</span>
             )}
           </div>
@@ -369,7 +373,8 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
 
             {/* 操作按钮 */}
             <div className="flex items-center">
-              {agent.status === 'idle' && (
+              {/* 有余额且在idle/eliminated状态 - 显示加入竞技场按钮 */}
+              {(agent.status === 'idle' || agent.status === 'eliminated') && agent.balance > 0 && (
                 <button
                   onClick={(e) => { e.stopPropagation(); joinArena(agent.id); }}
                   className="p-2 rounded-lg bg-luxury-gold/10 hover:bg-luxury-gold/20 text-luxury-gold transition-colors"
@@ -378,7 +383,8 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
                   <Swords className="w-4 h-4" />
                 </button>
               )}
-              {agent.status === 'in_arena' && (
+              {/* 有余额且在in_arena状态 - 显示退出竞技场按钮 */}
+              {agent.status === 'in_arena' && agent.balance > 0 && (
                 <button
                   onClick={(e) => { e.stopPropagation(); leaveArena(agent.id); }}
                   className="p-2 rounded-lg bg-luxury-rose/10 hover:bg-luxury-rose/20 text-luxury-rose transition-colors"
@@ -387,12 +393,14 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
                   <LogOut className="w-4 h-4" />
                 </button>
               )}
+              {/* 战斗中状态 */}
               {agent.status === 'fighting' && (
                 <span className="px-2 py-1 rounded-lg bg-luxury-rose/10 text-luxury-rose text-xs font-medium">
                   战斗中
                 </span>
               )}
-              {agent.status === 'eliminated' && (
+              {/* 无余额状态 - 显示已淘汰 */}
+              {agent.balance <= 0 && (
                 <span className="px-2 py-1 rounded-lg bg-gray-500/10 text-gray-500 text-xs font-medium">
                   已淘汰
                 </span>
