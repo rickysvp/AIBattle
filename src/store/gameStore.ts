@@ -1621,6 +1621,9 @@ export const useGameStore = create<GameStore>()(
         isTournament: false,
       };
 
+      // 根据余额确定最终状态：有余额则保持在竞技场，余额为0则被淘汰
+      const finalStatus = battleAgent.balance > 0 ? 'in_arena' : 'eliminated';
+
       // 更新agent到store
       set((state) => ({
         myAgents: state.myAgents.map(a =>
@@ -1634,7 +1637,7 @@ export const useGameStore = create<GameStore>()(
                 winRate: newWinRate,
                 netProfit: newNetProfit,
                 battleHistory: [battleRecord, ...a.battleHistory].slice(0, 50),
-                status: 'in_arena' as const,
+                status: finalStatus as 'in_arena' | 'eliminated',
               }
             : a
         ),
@@ -1649,7 +1652,7 @@ export const useGameStore = create<GameStore>()(
                 winRate: newWinRate,
                 netProfit: newNetProfit,
                 battleHistory: [battleRecord, ...a.battleHistory].slice(0, 50),
-                status: 'in_arena' as const,
+                status: finalStatus as 'in_arena' | 'eliminated',
               }
             : a
         ),
