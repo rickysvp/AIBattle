@@ -422,6 +422,7 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
               {participant ? (
                 <div className={`w-full h-full flex items-center justify-center transition-all duration-300 ${isJustSeated ? 'scale-125' : 'scale-100'}`}>
                   <PixelAgent
+                    key={`${participant.id}-${participant.balance}`}
                     agent={participant}
                     size={60}
                     showBalance={true}
