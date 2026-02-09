@@ -21,6 +21,7 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
   const [explosions, setExplosions] = useState<{id: string; x: number; y: number; timestamp: number}[]>([]);
   const [attackingAgents, setAttackingAgents] = useState<Set<string>>(new Set());
   const [hurtAgents, setHurtAgents] = useState<Set<string>>(new Set());
+  const [defendingAgents, setDefendingAgents] = useState<Set<string>>(new Set());
   const canvasRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>();
 
@@ -33,11 +34,63 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
   useEffect(() => {
     if (phase !== 'fighting') return;
 
+    // 计算内外侧位置（中心为 50, 50）
+    const getInnerOuterPosition = (pos: {x: number, y: number}, isInner: boolean) => {
+      const centerX = 50;
+      const centerY = 50;
+      const offset = isInner ? -8 : 8; // 内侧向中心偏移8%，外侧远离中心8%
+      const dx = pos.x - centerX;
+      const dy = pos.y - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance === 0) return pos;
+      const ratio = (distance + offset) / distance;
+      return {
+        x: centerX + dx * ratio,
+        y: centerY + dy * ratio,
+      };
+    };
+
     const battleInterval = setInterval(() => {
       // 每次从 store 获取最新的 participants 状态
       const currentParticipants = useGameStore.getState().arena.participants;
       const aliveAgents = currentParticipants.filter(a => a.balance > 0);
       if (aliveAgents.length < 2) return;
+
+      // 随机决定是攻击还是防御 (15% 概率防御)
+      if (Math.random() < 0.15) {
+        // 防御逻辑
+        const defenderIndex = Math.floor(Math.random() * aliveAgents.length);
+        const defender = aliveAgents[defenderIndex];
+        
+        setDefendingAgents(prev => new Set(prev).add(defender.id));
+        
+        // 显示防御飘字
+        const defenderSlot = currentParticipants.findIndex(p => p.id === defender.id);
+        if (defenderSlot !== -1) {
+          const defenderPos = getSlotPosition(defenderSlot);
+          // 稍微向外偏移
+          const defenderOuterPos = getInnerOuterPosition(defenderPos, false);
+          
+          setBalanceChanges(prev => [...prev, {
+            id: Math.random().toString(36).substr(2, 9),
+            x: defenderOuterPos.x,
+            y: defenderOuterPos.y - 5, // 稍微高一点
+            amount: 0, // 特殊标记，0表示显示文本
+            text: 'SHIELD UP!', // 需要在 BalanceChange 类型中添加 text 字段，或者这里借用 amount
+            isGain: true, // 绿色
+            timestamp: Date.now(),
+          }]);
+        }
+
+        setTimeout(() => {
+          setDefendingAgents(prev => {
+            const next = new Set(prev);
+            next.delete(defender.id);
+            return next;
+          });
+        }, 2000); // 防御持续 2 秒
+        return; // 本次循环只做防御，不攻击
+      }
 
       const attackerIndex = Math.floor(Math.random() * aliveAgents.length);
       let targetIndex = Math.floor(Math.random() * aliveAgents.length);
@@ -88,7 +141,14 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
         if (!latestAttacker || !latestTarget) return;
         
         const isCrit = Math.random() > 0.8;
-        const baseDamage = latestAttacker.attack - latestTarget.defense + Math.floor(Math.random() * 10);
+        let baseDamage = latestAttacker.attack - latestTarget.defense + Math.floor(Math.random() * 10);
+        
+        // 检查目标是否防御中
+        const isDefending = defendingAgents.has(target.id);
+        if (isDefending) {
+          baseDamage = Math.floor(baseDamage * 0.5); // 防御减少 50% 伤害
+        }
+
         const damage = Math.max(1, isCrit ? Math.floor(baseDamage * 1.5) : baseDamage);
 
         // 计算掠夺资金 (造成伤害的数值)
@@ -106,21 +166,7 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
           });
         }, 300);
 
-        // 计算内外侧位置（中心为 50, 50）
-        const getInnerOuterPosition = (pos: {x: number, y: number}, isInner: boolean) => {
-          const centerX = 50;
-          const centerY = 50;
-          const offset = isInner ? -8 : 8; // 内侧向中心偏移8%，外侧远离中心8%
-          const dx = pos.x - centerX;
-          const dy = pos.y - centerY;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance === 0) return pos;
-          const ratio = (distance + offset) / distance;
-          return {
-            x: centerX + dx * ratio,
-            y: centerY + dy * ratio,
-          };
-        };
+
 
         // 添加目标余额减少效果（红色 - 外侧显示）
         const targetOuterPos = getInnerOuterPosition(targetPos, false);
@@ -130,6 +176,7 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
           y: targetOuterPos.y,
           amount: lootAmount,
           isGain: false,
+          text: isDefending ? `Blocked! -${lootAmount}` : undefined,
           timestamp: Date.now(),
         }]);
 
@@ -308,6 +355,7 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
         const isDead = participant && participant.balance <= 0;
         const isMyAgent = participant?.isPlayer;
         const isJustSeated = phase === 'selecting' && isSelected && participant;
+        const isDefending = participant && defendingAgents.has(participant.id);
 
         return (
           <div
@@ -343,7 +391,7 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
 
             {/* 坑位底座 */}
             <div
-              className={`relative w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+              className={`relative w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300 overflow-hidden ${
                 isLit
                   ? 'bg-luxury-gold/20 shadow-lg shadow-luxury-gold/30'
                   : isMyAgent
@@ -372,13 +420,14 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
               }}
             >
               {participant ? (
-                <div className={`transition-all duration-300 ${isJustSeated ? 'scale-125' : 'scale-100'}`}>
+                <div className={`w-full h-full flex items-center justify-center transition-all duration-300 ${isJustSeated ? 'scale-125' : 'scale-100'}`}>
                   <PixelAgent
                     agent={participant}
-                    size={40}
+                    size={60}
                     showBalance={phase === 'fighting' || phase === 'settlement'}
                     isAttacking={isAttacking}
                     isHurt={isHurt}
+                    isDefending={isDefending}
                   />
                 </div>
               ) : (
@@ -387,14 +436,14 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
 
               {/* 死亡标记 */}
               {isDead && (
-                <div className="absolute inset-0 flex items-center justify-center bg-void/60 rounded-2xl">
+                <div className="absolute inset-0 flex items-center justify-center bg-void/60 z-20">
                   <span className="text-2xl">💀</span>
                 </div>
               )}
 
               {/* 我的 Agent 标记 */}
               {isMyAgent && !isDead && (
-                <div className="absolute -top-1 -right-1 w-5 h-5 bg-luxury-cyan rounded-full flex items-center justify-center border-2 border-void">
+                <div className="absolute top-0 right-0 w-4 h-4 bg-luxury-cyan rounded-bl-lg flex items-center justify-center z-20">
                   <span className="text-[8px] font-bold text-void">我</span>
                 </div>
               )}
@@ -402,19 +451,18 @@ const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
             
             {/* Agent 名称 */}
             {participant && (
-              <div className="absolute -bottom-7 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+              <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap z-30">
                 <span 
-                  className={`text-[10px] font-medium px-2 py-1 rounded-lg border ${
+                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border backdrop-blur-sm ${
                     isMyAgent 
-                      ? 'bg-luxury-cyan/20 border-luxury-cyan/50 text-luxury-cyan' 
-                      : 'bg-void-panel/80 border-white/5'
+                      ? 'bg-luxury-cyan/10 border-luxury-cyan/30 text-luxury-cyan' 
+                      : 'bg-black/40 border-white/10 text-white/80'
                   }`}
                   style={{ 
                     color: isDead ? '#666' : (isMyAgent ? '#22d3ee' : participant.color),
-                    textShadow: isDead ? 'none' : `0 0 10px ${isMyAgent ? '#22d3ee' : participant.color}60`
                   }}
                 >
-                  {isMyAgent ? '👤 ' : ''}{participant.name.slice(0, 8)}
+                  {participant.name.slice(0, 8)}
                 </span>
               </div>
             )}

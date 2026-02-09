@@ -98,19 +98,10 @@ const Arena: React.FC = () => {
   const [sortBy] = useState<'balance' | 'winRate' | 'profit'>('balance');
 
   // 用于测量左侧高度
-  const leftPanelRef = useRef<HTMLDivElement>(null);
-  const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
-
-  useEffect(() => {
-    const updateHeight = () => {
-      if (leftPanelRef.current) {
-        setLeftPanelHeight(leftPanelRef.current.offsetHeight);
-      }
-    };
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
-  }, []);
+  // 移除 leftPanelRef 和 height calculation state
+  // const leftPanelRef = useRef<HTMLDivElement>(null);
+  // const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
+  // ... removed resize observer code ...
 
   // 使用 ref 来管理计时器状态，避免闭包问题
   const timerStateRef = useRef<TimerState>({
@@ -258,11 +249,11 @@ const Arena: React.FC = () => {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
 
-        // ===== 4. 战斗阶段 (5秒，与后台战斗同步) =====
+        // ===== 4. 战斗阶段 (30秒，与后台战斗同步) =====
         syncPhaseToStore('fighting');
-        syncCountdownToStore(5);
+        syncCountdownToStore(30);
 
-        for (let i = 5; i > 0; i--) {
+        for (let i = 30; i > 0; i--) {
           if (!isActive) return;
           syncCountdownToStore(i);
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -416,14 +407,14 @@ const Arena: React.FC = () => {
   const currentSelectedSlots = timerStateRef.current.selectedSlots;
 
   return (
-    <div className="min-h-screen bg-void pt-24 pb-24">
+    <div className="min-h-screen bg-void pt-24 pb-[64px] lg:pb-32">
       <div className="max-w-screen-xl mx-auto px-4">
         {/* 排行榜跑马灯 - 在竞技场标题上方 */}
         <LeaderboardMarquee />
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
           {/* 左侧：竞技场 */}
-          <div ref={leftPanelRef} className="lg:col-span-3 space-y-6 relative">
+          <div className="lg:col-span-3 space-y-6 relative">
             {/* 战斗画面 */}
             <div className="card-luxury rounded-2xl overflow-hidden">
               <div className="px-6 h-[72px] border-b border-white/5 flex items-center justify-between">
@@ -444,11 +435,17 @@ const Arena: React.FC = () => {
                   </span>
                 </div>
               </div>
-              <div className="aspect-video p-4 relative">
+              <div className="aspect-[2/1] p-4 relative">
                 <ArenaCanvas
                   phase={currentPhase}
                   countdown={currentCountdown}
                   selectedSlots={currentSelectedSlots}
+                />
+
+                {/* 悬浮战斗日志 - 仅显示 arena 日志 */}
+                <BattleLog
+                  logs={arena.battleLogs}
+                  isOverlay={true}
                 />
 
                 {/* 结算弹窗 - 在竞技场画布内显示 */}
@@ -526,12 +523,11 @@ const Arena: React.FC = () => {
               </div>
             </div>
             
-            {/* 战斗日志 - Tab 切换 */}
+            {/* 战斗日志 - Tab 切换 (已移动到 Canvas 内部) */}
+            {/* 
             <div className="card-luxury rounded-2xl overflow-hidden">
-              {/* Tab 头部 - 简化设计 */}
               <div className="px-6 py-3 border-b border-white/5">
                 <div className="flex items-center relative bg-void-light/20 rounded-xl p-1 w-fit isolate">
-                  {/* 滑动背景指示器 - 在文字下方 */}
                   <motion.div
                     className="absolute inset-y-1 rounded-lg bg-luxury-purple/20 -z-10"
                     initial={false}
@@ -570,7 +566,6 @@ const Arena: React.FC = () => {
                 </div>
               </div>
 
-              {/* 日志内容 - 优化动画 */}
               <div className="relative overflow-hidden">
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
@@ -589,14 +584,21 @@ const Arena: React.FC = () => {
                 </AnimatePresence>
               </div>
             </div>
+             */}
           </div>
           
           {/* 右侧：我的小队 */}
-          <div className="lg:col-span-2">
-            {/* 小队概览 - 高度与左侧一致 */}
-            <div className="card-luxury rounded-2xl overflow-hidden flex flex-col" style={{ height: leftPanelHeight > 0 ? leftPanelHeight : 'auto' }}>
+          <div className="lg:col-span-1 h-full">
+            {/* 小队概览 - 绝对高度跟随父容器 (grid items stretch by default) */}
+            <div 
+              className="card-luxury rounded-2xl overflow-hidden flex flex-col w-full h-full"
+              style={{ 
+                minHeight: '400px', // 移动端给个最小高度
+                maxHeight: window.innerWidth < 1024 ? '500px' : 'none'
+              }}
+            >
               {/* 标题栏 + 铸造按钮 */}
-              <div className="px-6 h-[72px] border-b border-white/5 flex items-center justify-between">
+              <div className="px-6 h-[72px] border-b border-white/5 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <h2 className="text-lg font-semibold text-white">MY SQUAD</h2>
                 </div>
@@ -613,7 +615,7 @@ const Arena: React.FC = () => {
               </div>
 
               {/* 内容区域 - 可滚动 */}
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                 {!wallet.connected ? (
                   <div className="text-center py-12">
                     <div className="w-20 h-20 rounded-2xl bg-void-light/50 border border-white/5 flex items-center justify-center mx-auto mb-4">
@@ -644,18 +646,18 @@ const Arena: React.FC = () => {
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    {/* 表头 */}
-                    <div className="flex items-center gap-2 px-2 py-1 text-[10px] text-white/40 uppercase tracking-wider border-b border-white/5">
+                    {/* 表头 - 调整对齐 */}
+                    <div className="flex items-center gap-2 px-2 py-1.5 text-[10px] text-white/40 uppercase tracking-wider border-b border-white/5 mb-1">
                       <div className="w-8 flex-shrink-0"></div>
-                      <div className="w-20 flex-shrink-0">{t('squad.name')}</div>
-                      <div className="w-14 flex-shrink-0 text-right">{t('squad.balance')}</div>
-                      <div className="w-14 flex-shrink-0 text-right">{t('squad.profit')}</div>
-                      <div className="flex-1 text-right">{t('squad.actions')}</div>
+                      <div className="flex-1 min-w-0">{t('squad.name')} / {t('squad.profit')}</div>
+                      <div className="w-[60px] text-right">{t('squad.actions')}</div>
                     </div>
-                    {/* 所有 Agents 列表 - 最多显示30个 */}
-                    {sortedAgents.slice(0, 30).map(agent => (
-                      <AgentCard key={agent.id} agent={agent} viewMode="list" />
-                    ))}
+                    {/* 所有 Agents 列表 - 紧凑模式 */}
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {sortedAgents.slice(0, 30).map(agent => (
+                        <AgentCard key={agent.id} agent={agent} viewMode="list" compact />
+                      ))}
+                    </div>
                     {myAgents.length > 30 && (
                       <p className="text-xs text-white/30 text-center py-2">
                         {myAgents.length - 30} {t('squad.agents')} {t('common.hidden')}

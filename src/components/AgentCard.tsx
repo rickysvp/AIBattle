@@ -197,31 +197,19 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
     );
   }
 
-  // 列表视图
+  // 列表视图 - 极简紧凑版 (Updated for user request: Status dot, Combined info)
   if (viewMode === 'list') {
     return (
       <>
         <div 
-          className="flex items-center gap-2 p-2 bg-void-light/30 rounded-xl border border-white/5 hover:border-white/10 transition-all cursor-pointer group"
+          className={`flex items-center gap-2 px-2 py-1.5 bg-white/5 rounded-lg border border-white/5 hover:border-white/10 hover:bg-white/10 transition-all cursor-pointer group ${compact ? 'text-xs' : 'text-sm'}`}
           onClick={() => setIsDetailOpen(true)}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
         >
           {/* Agent 头像 */}
           <div className="relative flex-shrink-0">
             <div 
-              className="absolute inset-0 blur-lg rounded-full transition-opacity duration-300"
-              style={{ 
-                backgroundColor: rarity.color,
-                opacity: isHovered ? 0.5 : 0.3 
-              }}
-            />
-            <div 
-              className="relative w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden"
-              style={{ 
-                background: `linear-gradient(135deg, ${rarity.color}20, ${rarity.color}40)`,
-                border: `1.5px solid ${rarity.color}`
-              }}
+              className="w-8 h-8 rounded-lg overflow-hidden border border-white/10"
+              style={{ borderColor: rarity.color }}
             >
               {agent.image ? (
                 <img 
@@ -230,65 +218,60 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <PixelAgent agent={agent} size={24} />
+                <div className="w-full h-full bg-black/20 flex items-center justify-center">
+                   <PixelAgent agent={agent} size={20} />
+                </div>
               )}
             </div>
+            {/* 状态小圆点 */}
+            <div className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-black ${
+               agent.status === 'in_arena' ? 'bg-green-500' : 
+               agent.status === 'fighting' ? 'bg-red-500' : 'bg-gray-500'
+            }`} />
           </div>
           
           {/* 名称和稀有度 */}
-          <div className="w-20 flex-shrink-0">
-            <h4 className="text-xs font-semibold text-white truncate">{agent.name}</h4>
-            <div className="flex items-center gap-1 mt-0.5">
-              <span className="text-[10px] text-white/40">#{agent.nftId}</span>
-              <span 
-                className="text-[10px] font-medium"
-                style={{ color: rarity.color }}
-              >
-                {rarity.name}
+          <div className="flex-1 min-w-0 flex flex-col justify-center">
+            <div className="flex items-center gap-1.5">
+               <span className="font-medium text-white/90 truncate max-w-[80px]" style={{ color: rarity.color }}>{agent.name}</span>
+               <span className="text-[9px] px-1 rounded-sm bg-white/5 text-white/40">#{agent.nftId}</span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px]">
+              <span className={agent.balance > 0 ? 'text-luxury-gold' : 'text-red-400'}>
+                 ${agent.balance.toFixed(0)}
+              </span>
+              <span className={`font-mono ${agent.netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ({agent.netProfit >= 0 ? '+' : ''}{agent.netProfit})
               </span>
             </div>
           </div>
 
-          {/* 余额 */}
-          <div className="w-14 flex-shrink-0 text-right">
-            <span className="text-xs font-mono text-white">{agent.balance.toFixed(0)}</span>
-          </div>
-
-          {/* 盈亏 */}
-          <div className="w-14 flex-shrink-0 text-right">
-            <span className={`text-xs font-mono ${agent.netProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
-              {agent.netProfit >= 0 ? '+' : ''}{agent.netProfit.toLocaleString()}
-            </span>
-          </div>
-
-          {/* 操作按钮 */}
-          <div className="flex-1 flex items-center justify-end gap-1.5">
+          {/* 状态文字 (替代盈亏列) */}
+          {/* <div className="text-right mr-1"> ... </div>  Removed separate profit column, moved to subtext */}
+          
+          {/* 极简操作按钮 */}
+          <div className="flex items-center gap-1">
             {agent.status === 'idle' && (
-              <button
-                onClick={(e) => { e.stopPropagation(); joinArena(agent.id); }}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs bg-luxury-gold/10 text-luxury-gold rounded-lg hover:bg-luxury-gold/20 active:bg-luxury-gold/30 transition-colors min-h-[44px]"
-                title="加入竞技场"
-              >
-                <Swords className="w-4 h-4" />
-                <span className="hidden sm:inline">加入</span>
-              </button>
+               <button
+                  onClick={(e) => { e.stopPropagation(); joinArena(agent.id); }}
+                  className="p-1.5 rounded-md bg-white/5 hover:bg-green-500/20 text-white/40 hover:text-green-400 transition-colors"
+                  title="加入"
+               >
+                 <Swords className="w-3.5 h-3.5" />
+               </button>
             )}
             {agent.status === 'in_arena' && (
-              <button
-                onClick={(e) => { e.stopPropagation(); leaveArena(agent.id); }}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs bg-luxury-rose/10 text-luxury-rose rounded-lg hover:bg-luxury-rose/20 active:bg-luxury-rose/30 transition-colors min-h-[44px]"
-                title="退出竞技场"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">退出</span>
-              </button>
+               <button
+                  onClick={(e) => { e.stopPropagation(); leaveArena(agent.id); }}
+                  className="p-1.5 rounded-md bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-colors"
+                  title="退出"
+               >
+                 <LogOut className="w-3.5 h-3.5" />
+               </button>
             )}
-            {agent.status === 'fighting' && (
-              <span className="text-xs text-white/30 px-3 py-2 min-h-[44px] flex items-center">战斗中</span>
-            )}
-            {agent.status === 'dead' && (
-              <span className="text-xs text-white/30 px-3 py-2 min-h-[44px] flex items-center">阵亡</span>
-            )}
+            {/* 状态文本提示 */}
+            {agent.status === 'fighting' && <span className="text-[10px] text-red-400">Fighting</span>}
+            {agent.status === 'dead' && <span className="text-[10px] text-gray-500">Dead</span>}
           </div>
         </div>
 

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import {
   Agent, BattleLog, ArenaState, WalletState, Tournament, RoundPhase,
   LiquidityPool, LiquidityStake, PredictionMarket, PredictionBet, AutoBetRule,
@@ -91,7 +92,9 @@ interface GameStore {
   getRandomAgentBattleHistory: (agentId: string) => { battle: any; opponent: Agent | null; result: string; profit: number } | null;
 }
 
-export const useGameStore = create<GameStore>((set, get) => ({
+export const useGameStore = create<GameStore>()(
+  persist(
+    (set, get) => ({
   // 钱包初始状态
   wallet: {
     connected: false,
@@ -104,9 +107,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   connectWallet: async (nickname: string, type: 'twitter' | 'google' | 'wallet' = 'wallet') => {
-    const randomAddress = '0x' + Array.from({ length: 40 }, () =>
-      Math.floor(Math.random() * 16).toString(16)
-    ).join('');
+    // 尝试从 localStorage 获取已存在的模拟钱包地址，模拟真实的钱包体验
+    let storedAddress = localStorage.getItem('mock_wallet_address');
+    
+    if (!storedAddress) {
+      storedAddress = '0x' + Array.from({ length: 40 }, () =>
+        Math.floor(Math.random() * 16).toString(16)
+      ).join('');
+      localStorage.setItem('mock_wallet_address', storedAddress);
+    }
+
+    const randomAddress = storedAddress;
 
     // 生成头像
     let avatar = '';
@@ -120,7 +131,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // 预登录：立即设置登录状态，让用户可以立即使用界面
     const userId = randomAddress;
-    const userBalance = 10000; // 默认余额
+    
+    // 检查是否是重新登录（store中是否已有该用户的余额信息）
+    // 注意：由于使用了 persist，这里 get().wallet 可能已经是旧数据，但如果是 disconnect 后再 connect，
+    // 我们希望恢复之前的状态。
+    // 如果是全新生成的地址，默认 10000。如果是旧地址，尝试从后端或本地恢复。
+    
+    // 这里我们先设置默认值，然后依靠下方的 UserService 获取真实数据
+    const userBalance = 10000; 
 
     set({
       wallet: {
@@ -140,10 +158,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 后台异步保存用户到 Supabase（不阻塞用户体验）
     (async () => {
       try {
+        // 先尝试获取用户，看是否存在
+        // 注意：getOrCreateUser 会更新用户信息，但我们想保留余额
+        // 这里简化逻辑：总是调用 getOrCreateUser，它应该返回最新数据
+        
         const userData: any = {
           username: nickname,
           avatar,
-          balance: 10000,
+          // 不传 balance，防止重置为 10000。只有创建新用户时 Supabase 可能会使用默认值
         };
 
         if (type === 'wallet') {
@@ -159,22 +181,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
         if (user && user.id) {
           // 更新真实的 userId 和余额
+          // 如果是老用户，user.balance 应该是数据库里的值
           set((state) => ({
             wallet: {
               ...state.wallet,
               userId: user.id,
-              balance: user.balance || 10000,
+              balance: user.balance !== undefined ? user.balance : state.wallet.balance,
             }
           }));
-          console.log(`[Wallet] User saved to Supabase: ${nickname} (${user.id})`);
+          console.log(`[Wallet] User saved to Supabase: ${nickname} (${user.id}), Balance: ${user.balance}`);
 
           // 加载用户的 Agents
           try {
             const userAgents = await AgentService.getUserAgents(user.id);
-            set({
-              myAgents: userAgents.map(DataTransformers.toFrontendAgent),
-            });
-            console.log(`[Wallet] Loaded ${userAgents.length} agents for user ${nickname}`);
+            if (userAgents.length > 0) {
+                 set({
+                  myAgents: userAgents.map(DataTransformers.toFrontendAgent),
+                });
+                console.log(`[Wallet] Loaded ${userAgents.length} agents for user ${nickname}`);
+            }
           } catch (agentError) {
             console.error('[Wallet] Failed to load user agents:', agentError);
           }
@@ -1680,4 +1705,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       profit: randomBattle.earnings,
     };
   },
+}), {
+  name: 'aibrawl-storage',
+  storage: createJSONStorage(() => localStorage),
+  partialize: (state) => ({ 
+    wallet: state.wallet,
+    myAgents: state.myAgents,
+  }),
 }));
