@@ -174,14 +174,14 @@ const PixelAgent: React.FC<PixelAgentProps> = ({
         filter: isDead ? 'grayscale(100%)' : 'none',
       }}
     >
-      {/* 余额显示 - 始终显示（只要showBalance为true） */}
+      {/* 余额显示 - 在头像底部显示 */}
       {showBalance && (
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap z-10">
-          <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border ${
-            isDead ? 'bg-gray-500/50 border-gray-500/30' : 'bg-void-panel/90 border-luxury-gold/30'
+        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap z-20">
+          <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border ${
+            isDead ? 'bg-gray-900/80 border-gray-600/50' : 'bg-black/70 border-luxury-gold/50'
           }`}>
-            <span className={`text-[8px] ${isDead ? 'text-gray-400' : 'text-luxury-gold'}`}>$</span>
-            <span className={`text-[9px] font-mono ${isDead ? 'text-gray-400' : 'text-white'}`}>{balance}</span>
+            <span className={`text-[8px] ${isDead ? 'text-gray-500' : 'text-luxury-gold'}`}>$</span>
+            <span className={`text-[9px] font-mono font-bold ${isDead ? 'text-gray-400' : 'text-white'}`}>{balance}</span>
           </div>
         </div>
       )}
