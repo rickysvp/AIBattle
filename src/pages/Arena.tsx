@@ -409,12 +409,12 @@ const Arena: React.FC = () => {
         {/* 排行榜跑马灯 - 在竞技场标题上方 */}
         <LeaderboardMarquee />
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6" style={{ gridAutoRows: '1fr' }}>
           {/* 左侧：竞技场 */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 h-full">
             {/* 战斗画面 */}
-            <div className="card-luxury rounded-2xl overflow-hidden">
-              <div className="px-6 h-[72px] border-b border-white/5 flex items-center justify-between">
+            <div className="card-luxury rounded-2xl overflow-hidden h-full flex flex-col">
+              <div className="px-6 h-[72px] border-b border-white/5 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-semibold text-white">BATTLE</h2>
                   <span className="text-xs px-2 py-0.5 rounded-full bg-luxury-gold/20 text-luxury-gold border border-luxury-gold/30 font-mono">
@@ -432,7 +432,7 @@ const Arena: React.FC = () => {
                   </span>
                 </div>
               </div>
-              <div className="aspect-[2/1] p-4 relative">
+              <div className="flex-1 p-4 relative min-h-0">
                 <ArenaCanvas
                   phase={currentPhase}
                   countdown={currentCountdown}
@@ -591,11 +591,10 @@ const Arena: React.FC = () => {
           </div>
           
           {/* 右侧：我的小队 */}
-          <div className="lg:col-span-1" style={{ maxHeight: '600px' }}>
-            {/* 小队概览 - 固定高度600px */}
+          <div className="lg:col-span-1 h-full">
+            {/* 小队概览 - 高度与左侧对齐 */}
             <div 
-              className="card-luxury rounded-2xl overflow-hidden flex flex-col w-full"
-              style={{ height: '600px' }}
+              className="card-luxury rounded-2xl overflow-hidden flex flex-col w-full h-full"
             >
               {/* 标题栏 + 铸造按钮 */}
               <div className="px-6 h-[72px] border-b border-white/5 flex items-center justify-between flex-shrink-0">
