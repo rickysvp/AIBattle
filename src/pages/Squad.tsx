@@ -47,7 +47,7 @@ const Squad: React.FC = () => {
   }, [myAgents]);
   
   const [mintCount, setMintCount] = useState(1);
-  const [filter, setFilter] = useState<'all' | 'idle' | 'in_arena' | 'fighting'>('all');
+  const [filter, setFilter] = useState<'all' | 'idle' | 'in_arena' | 'fighting' | 'eliminated'>('all');
   const [isMinting, setIsMinting] = useState(false);
   const [showMintModal, setShowMintModal] = useState(false);
   const [mintedAgents, setMintedAgents] = useState<Agent[]>([]);
@@ -238,6 +238,7 @@ const Squad: React.FC = () => {
       case 'idle': return { label: t('squad.idle'), color: 'bg-luxury-cyan', icon: Wallet };
       case 'in_arena': return { label: t('arena.waiting'), color: 'bg-luxury-gold', icon: Swords };
       case 'fighting': return { label: t('arena.fighting'), color: 'bg-luxury-rose', icon: Skull };
+      case 'eliminated': return { label: '已淘汰', color: 'bg-gray-500', icon: Skull };
       default: return { label: t('squad.all'), color: 'bg-luxury-purple', icon: Users };
     }
   };
@@ -387,7 +388,7 @@ const Squad: React.FC = () => {
                 <span className="text-sm hidden sm:inline">{t('arena.filter')}</span>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                {(['all', 'idle', 'in_arena', 'fighting'] as const).map(key => {
+                {(['all', 'idle', 'in_arena', 'fighting', 'eliminated'] as const).map(key => {
                   const config = getFilterConfig(key);
                   const Icon = config.icon;
                   return (
