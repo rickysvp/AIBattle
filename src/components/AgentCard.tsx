@@ -75,23 +75,11 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
   const { joinArena, leaveArena } = useGameStore();
   
   const getStatusConfig = () => {
-    // 无余额统一显示为灰色（已淘汰）
-    if (agent.balance <= 0) {
-      return { 
-        label: '已淘汰', 
-        color: 'text-gray-500',
-        bgColor: 'bg-gray-500/10',
-        borderColor: 'border-gray-500/30',
-        dotColor: 'bg-gray-500'
-      };
-    }
-    
-    // 有余额根据状态显示
+    // 只根据status显示状态，不根据余额
     switch (agent.status) {
       case 'idle': 
-      case 'eliminated': // eliminated但有余额，显示为可加入
         return { 
-          label: '可加入', 
+          label: '空闲', 
           color: 'text-luxury-cyan',
           bgColor: 'bg-luxury-cyan/10',
           borderColor: 'border-luxury-cyan/30',
@@ -112,6 +100,14 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
           bgColor: 'bg-luxury-rose/10',
           borderColor: 'border-luxury-rose/30',
           dotColor: 'bg-luxury-rose'
+        };
+      case 'eliminated': 
+        return { 
+          label: '已淘汰', 
+          color: 'text-gray-500',
+          bgColor: 'bg-gray-500/10',
+          borderColor: 'border-gray-500/30',
+          dotColor: 'bg-gray-500'
         };
       default: 
         return { 
@@ -179,8 +175,8 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
 
           {/* 操作按钮 */}
           <div className="flex items-center relative z-10" onClick={(e) => e.stopPropagation()}>
-            {/* 有余额且在idle/eliminated状态 - 显示加入竞技场按钮 */}
-            {(agent.status === 'idle' || agent.status === 'eliminated') && agent.balance > 0 && (
+            {/* 有余额且在idle状态 - 显示加入竞技场按钮 */}
+            {agent.status === 'idle' && agent.balance > 0 && (
               <button
                 onClick={(e) => {
                   e.preventDefault();
@@ -211,9 +207,19 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, compact = false, viewMode 
             {agent.status === 'fighting' && (
               <span className="text-[10px] text-luxury-rose">战斗中</span>
             )}
-            {/* 无余额状态 - 显示已淘汰 */}
+            {/* 无余额状态 - 显示充值按钮 */}
             {agent.balance <= 0 && (
-              <span className="text-[10px] text-gray-500">已淘汰</span>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.location.href = '/recharge';
+                }}
+                className="p-1.5 rounded-lg bg-luxury-cyan/10 hover:bg-luxury-cyan/20 text-luxury-cyan transition-colors relative z-20"
+                title="充值"
+              >
+                <Wallet className="w-3.5 h-3.5" />
+              </button>
             )}
           </div>
         </div>
