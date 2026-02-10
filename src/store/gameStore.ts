@@ -509,7 +509,6 @@ export const useGameStore = create<GameStore>()(
         participants: [],
         selectedSlots: [],
         top3: [],
-        battleLogs: [], // 清空战斗日志，只保留当前场次
       }
     }));
   },
@@ -1776,7 +1775,13 @@ export const useGameStore = create<GameStore>()(
       };
 
       set((state) => ({
+        // 添加到我的战斗日志
         myBattleLogs: [log, ...state.myBattleLogs].slice(0, 50),
+        // 同时添加到竞技场战斗日志，让所有战斗日志都显示在竞技场
+        arena: {
+          ...state.arena,
+          battleLogs: [log, ...state.arena.battleLogs].slice(0, 100),
+        },
       }));
     }
 
