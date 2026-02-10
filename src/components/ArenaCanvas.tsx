@@ -1,647 +1,456 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Projectile, CoinTransfer, BalanceChange } from '../types';
+import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { useGameStore } from '../store/gameStore';
-import PixelAgent from './PixelAgent';
-import { Swords, Timer, Coins } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface ArenaCanvasProps {
   phase: string;
   countdown: number;
   selectedSlots: number[];
+  priceChange: number;
+}
+
+// 粒子
+interface Particle {
+  id: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  alpha: number;
+  side: 'long' | 'short';
+}
+
+// 波浪点
+interface WavePoint {
+  y: number;
+  targetY: number;
+  speed: number;
+}
+
+// 收益数字
+interface ProfitNumber {
+  id: string;
+  x: number;
+  y: number;
+  amount: number;
+  side: 'long' | 'short';
+  timestamp: number;
 }
 
 const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
   phase,
   countdown,
-  selectedSlots
+  selectedSlots,
+  priceChange,
 }) => {
-  const [projectiles, setProjectiles] = useState<Projectile[]>([]);
-  const [coinTransfers, setCoinTransfers] = useState<CoinTransfer[]>([]);
-  const [balanceChanges, setBalanceChanges] = useState<BalanceChange[]>([]);
-  const [explosions, setExplosions] = useState<{id: string; x: number; y: number; timestamp: number}[]>([]);
-  const [attackingAgents, setAttackingAgents] = useState<Set<string>>(new Set());
-  const [hurtAgents, setHurtAgents] = useState<Set<string>>(new Set());
-  const [defendingAgents, setDefendingAgents] = useState<Set<string>>(new Set());
-  const canvasRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
+  const particlesRef = useRef<Particle[]>([]);
+  const wavePointsRef = useRef<WavePoint[]>([]);
+  const frontLineXRef = useRef(0.5);
+  const targetFrontLineXRef = useRef(0.5);
+  const lastPriceChangeRef = useRef(0);
+  const profitNumbersRef = useRef<ProfitNumber[]>([]);
+  const lastSettlementRef = useRef(0);
 
-  // 直接从 store 获取 participants，确保实时更新
-  const participants = useGameStore(state => state.arena.participants);
-  const addBattleLog = useGameStore(state => state.addBattleLog);
+  const arena = useGameStore(state => state.arena);
+  const myAgents = useGameStore(state => state.myAgents);
+  const systemAgents = useGameStore(state => state.systemAgents);
   const updateParticipant = useGameStore(state => state.updateParticipant);
-  
-  // 战斗动画循环 - 使用余额作为血量
+
+  const { participants, currentPrice } = arena;
+
+  const { longAgents, shortAgents, longPower, shortPower } = useMemo(() => {
+    const longs = participants.filter(p => p.position === 'long' && p.balance > 0);
+    const shorts = participants.filter(p => p.position === 'short' && p.balance > 0);
+    return {
+      longAgents: longs,
+      shortAgents: shorts,
+      longPower: longs.reduce((sum, p) => sum + p.balance * p.leverage, 0),
+      shortPower: shorts.reduce((sum, p) => sum + p.balance * p.leverage, 0),
+    };
+  }, [participants]);
+
+  // 每秒结算获胜方收益
   useEffect(() => {
     if (phase !== 'fighting') return;
 
-    // 计算内外侧位置（中心为 50, 50）
-    const getInnerOuterPosition = (pos: {x: number, y: number}, isInner: boolean) => {
-      const centerX = 50;
-      const centerY = 50;
-      const offset = isInner ? -8 : 8; // 内侧向中心偏移8%，外侧远离中心8%
-      const dx = pos.x - centerX;
-      const dy = pos.y - centerY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance === 0) return pos;
-      const ratio = (distance + offset) / distance;
-      return {
-        x: centerX + dx * ratio,
-        y: centerY + dy * ratio,
-      };
-    };
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (now - lastSettlementRef.current < 1000) return;
+      lastSettlementRef.current = now;
 
-    const battleInterval = setInterval(() => {
-      // 每次从 store 获取最新的 participants 状态
-      const currentParticipants = useGameStore.getState().arena.participants;
-      const aliveAgents = currentParticipants.filter(a => a.balance > 0);
-      if (aliveAgents.length < 2) return;
-
-      // 随机决定是攻击还是防御 (15% 概率防御)
-      if (Math.random() < 0.15) {
-        // 防御逻辑
-        const defenderIndex = Math.floor(Math.random() * aliveAgents.length);
-        const defender = aliveAgents[defenderIndex];
+      // 根据当前价格变化方向确定获胜方
+      const priceDirection = priceChange > 0 ? 'up' : priceChange < 0 ? 'down' : 'neutral';
+      
+      if (priceDirection === 'up' && shortAgents.length > 0 && longAgents.length > 0) {
+        // 多头获胜：空头支付资金给多头
+        const settlementRate = 0.02; // 每秒结算2%
         
-        setDefendingAgents(prev => new Set(prev).add(defender.id));
-        
-        // 显示防御飘字
-        const defenderSlot = currentParticipants.findIndex(p => p.id === defender.id);
-        if (defenderSlot !== -1) {
-          const defenderPos = getSlotPosition(defenderSlot);
-          // 稍微向外偏移
-          const defenderOuterPos = getInnerOuterPosition(defenderPos, false);
-          
-          setBalanceChanges(prev => [...prev, {
-            id: Math.random().toString(36).substr(2, 9),
-            x: defenderOuterPos.x,
-            y: defenderOuterPos.y - 5, // 稍微高一点
-            amount: 0, // 特殊标记，0表示显示文本
-            text: 'SHIELD UP!', // 需要在 BalanceChange 类型中添加 text 字段，或者这里借用 amount
-            isGain: true, // 绿色
-            timestamp: Date.now(),
-          }]);
-        }
+        // 计算空头总损失
+        const shortLosses = shortAgents.map(agent => {
+          const loss = Math.floor(agent.balance * agent.leverage * settlementRate);
+          return { agent, loss: Math.min(loss, agent.balance) };
+        }).filter(item => item.loss > 0);
 
-        setTimeout(() => {
-          setDefendingAgents(prev => {
-            const next = new Set(prev);
-            next.delete(defender.id);
-            return next;
+        const totalLoss = shortLosses.reduce((sum, item) => sum + item.loss, 0);
+
+        if (totalLoss > 0) {
+          const profitPerLong = Math.floor(totalLoss / longAgents.length);
+
+          // 分配给多头
+          longAgents.forEach((agent, index) => {
+            const extra = index === 0 ? totalLoss - profitPerLong * longAgents.length : 0;
+            const totalProfit = profitPerLong + extra;
+
+            updateParticipant(agent.id, { balance: agent.balance + totalProfit });
+
+            const pos = getAgentPosition(agent);
+            profitNumbersRef.current.push({
+              id: `profit-${agent.id}-${now}`,
+              x: pos.x,
+              y: pos.y,
+              amount: totalProfit,
+              side: 'long',
+              timestamp: now,
+            });
           });
-        }, 2000); // 防御持续 2 秒
-        return; // 本次循环只做防御，不攻击
+
+          // 扣除空头
+          shortLosses.forEach(({ agent, loss }) => {
+            updateParticipant(agent.id, { balance: Math.max(0, agent.balance - loss) });
+          });
+        }
+      } else if (priceDirection === 'down' && longAgents.length > 0 && shortAgents.length > 0) {
+        // 空头获胜：多头支付资金给空头
+        const settlementRate = 0.02;
+
+        // 计算多头总损失
+        const longLosses = longAgents.map(agent => {
+          const loss = Math.floor(agent.balance * agent.leverage * settlementRate);
+          return { agent, loss: Math.min(loss, agent.balance) };
+        }).filter(item => item.loss > 0);
+
+        const totalLoss = longLosses.reduce((sum, item) => sum + item.loss, 0);
+
+        if (totalLoss > 0) {
+          const profitPerShort = Math.floor(totalLoss / shortAgents.length);
+
+          // 分配给空头
+          shortAgents.forEach((agent, index) => {
+            const extra = index === 0 ? totalLoss - profitPerShort * shortAgents.length : 0;
+            const totalProfit = profitPerShort + extra;
+
+            updateParticipant(agent.id, { balance: agent.balance + totalProfit });
+
+            const pos = getAgentPosition(agent);
+            profitNumbersRef.current.push({
+              id: `profit-${agent.id}-${now}`,
+              x: pos.x,
+              y: pos.y,
+              amount: totalProfit,
+              side: 'short',
+              timestamp: now,
+            });
+          });
+
+          // 扣除多头
+          longLosses.forEach(({ agent, loss }) => {
+            updateParticipant(agent.id, { balance: Math.max(0, agent.balance - loss) });
+          });
+        }
       }
+    }, 100);
 
-      const attackerIndex = Math.floor(Math.random() * aliveAgents.length);
-      let targetIndex = Math.floor(Math.random() * aliveAgents.length);
-      while (targetIndex === attackerIndex) {
-        targetIndex = Math.floor(Math.random() * aliveAgents.length);
-      }
+    return () => clearInterval(interval);
+  }, [phase, priceChange, longAgents, shortAgents, myAgents, systemAgents, updateParticipant]);
 
-      const attacker = aliveAgents[attackerIndex];
-      const target = aliveAgents[targetIndex];
+  const getAgentPosition = useCallback((agent: any) => {
+    const isLong = agent.position === 'long';
+    const index = isLong
+      ? longAgents.findIndex(a => a.id === agent.id)
+      : shortAgents.findIndex(a => a.id === agent.id);
 
-      const attackerSlot = currentParticipants.findIndex(p => p.id === attacker.id);
-      const targetSlot = currentParticipants.findIndex(p => p.id === target.id);
+    // 简化位置计算
+    const yPos = ((index % 5) / 4) * 80 + 10;
+    const xPos = isLong ? 15 + Math.floor(index / 5) * 8 : 85 - Math.floor(index / 5) * 8;
 
-      if (attackerSlot === -1 || targetSlot === -1) return;
+    return { x: xPos, y: yPos };
+  }, [longAgents, shortAgents]);
 
-      const attackerPos = getSlotPosition(attackerSlot);
-      const targetPos = getSlotPosition(targetSlot);
-
-      // 设置攻击动画
-      setAttackingAgents(prev => new Set(prev).add(attacker.id));
-      setTimeout(() => {
-        setAttackingAgents(prev => {
-          const next = new Set(prev);
-          next.delete(attacker.id);
-          return next;
-        });
-      }, 200);
-
-      // 添加子弹
-      const projectile: Projectile = {
-        id: Math.random().toString(36).substr(2, 9),
-        fromX: attackerPos.x,
-        fromY: attackerPos.y,
-        toX: targetPos.x,
-        toY: targetPos.y,
-        color: attacker.color,
-        progress: 0,
-      };
-      setProjectiles(prev => [...prev, projectile]);
-
-      // 延迟计算伤害
-      setTimeout(() => {
-        // 再次获取最新状态
-        const latestParticipants = useGameStore.getState().arena.participants;
-        const latestAttacker = latestParticipants.find(p => p.id === attacker.id);
-        const latestTarget = latestParticipants.find(p => p.id === target.id);
-        
-        if (!latestAttacker || !latestTarget) return;
-        
-        const isCrit = Math.random() > 0.8;
-        // 基础伤害 = (攻击力 - 防御力) * 倍率 + 随机值
-        // 倍率设置为5，让掠夺金额更合理（原来只有1倍，导致伤害只有1-15）
-        const damageMultiplier = 5;
-        let baseDamage = (latestAttacker.attack - latestTarget.defense) * damageMultiplier + Math.floor(Math.random() * 50);
-        
-        // 检查目标是否防御中
-        const isDefending = defendingAgents.has(target.id);
-        if (isDefending) {
-          baseDamage = Math.floor(baseDamage * 0.5); // 防御减少 50% 伤害
-        }
-
-        const damage = Math.max(10, isCrit ? Math.floor(baseDamage * 1.5) : baseDamage);
-
-        // 计算掠夺资金 (实际从目标身上拿走的金额，不能超过目标余额)
-        const lootAmount = Math.min(damage, latestTarget.balance);
-        const newTargetBalance = latestTarget.balance - lootAmount;
-        const newAttackerBalance = latestAttacker.balance + lootAmount;
-
-        // 设置受伤动画
-        setHurtAgents(prev => new Set(prev).add(target.id));
-        setTimeout(() => {
-          setHurtAgents(prev => {
-            const next = new Set(prev);
-            next.delete(target.id);
-            return next;
-          });
-        }, 300);
-
-
-
-        // 添加目标余额减少效果（红色 - 外侧显示）
-        const targetOuterPos = getInnerOuterPosition(targetPos, false);
-        setBalanceChanges(prev => [...prev, {
-          id: Math.random().toString(36).substr(2, 9),
-          x: targetOuterPos.x,
-          y: targetOuterPos.y,
-          amount: lootAmount,
-          isGain: false,
-          text: isDefending ? `Blocked! -${lootAmount}` : undefined,
-          timestamp: Date.now(),
-        }]);
-
-        // 添加攻击者余额增加效果（绿色 - 内侧显示）
-        const attackerInnerPos = getInnerOuterPosition(attackerPos, true);
-        setBalanceChanges(prev => [...prev, {
-          id: Math.random().toString(36).substr(2, 9),
-          x: attackerInnerPos.x,
-          y: attackerInnerPos.y,
-          amount: lootAmount,
-          isGain: true,
-          timestamp: Date.now(),
-        }]);
-
-        // 更新目标余额（减少）
-        const isEliminated = newTargetBalance <= 0;
-        updateParticipant(target.id, { 
-          balance: newTargetBalance, 
-          status: isEliminated ? 'eliminated' : 'fighting' 
-        });
-
-        // 更新攻击者余额（增加）
-        updateParticipant(latestAttacker.id, { balance: newAttackerBalance });
-
-        // 淘汰效果
-        if (isEliminated) {
-          setExplosions(prev => [...prev, {
-            id: Math.random().toString(36).substr(2, 9),
-            x: targetPos.x,
-            y: targetPos.y,
-            timestamp: Date.now(),
-          }]);
-
-          addBattleLog({
-            type: 'eliminate',
-            attacker: latestAttacker,
-            defender: latestTarget,
-            message: `${latestAttacker.name} 淘汰了 ${latestTarget.name}！`,
-            isHighlight: true,
-          });
-        } else {
-          addBattleLog({
-            type: 'attack',
-            attacker: latestAttacker,
-            defender: latestTarget,
-            message: `${latestAttacker.name} 掠夺了 ${latestTarget.name} +${lootAmount} $MON`,
-          });
-        }
-      }, 200);
-    }, 400);
-
-    return () => clearInterval(battleInterval);
-  }, [phase]);
-  
-  // 子弹动画
+  // 根据价格变化计算目标战线位置
   useEffect(() => {
-    const animateProjectiles = () => {
-      setProjectiles(prev => 
-        prev
-          .map(p => ({ ...p, progress: p.progress + 0.15 }))
-          .filter(p => p.progress < 1)
-      );
-      animationRef.current = requestAnimationFrame(animateProjectiles);
+    if (phase !== 'fighting') return;
+
+    const priceDelta = priceChange - lastPriceChangeRef.current;
+    lastPriceChangeRef.current = priceChange;
+
+    const shift = priceDelta * 0.05;
+    targetFrontLineXRef.current = Math.max(0.1, Math.min(0.9, targetFrontLineXRef.current + shift));
+  }, [priceChange, phase]);
+
+  // Canvas 动画循环
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const resize = () => {
+      const rect = canvas.parentElement?.getBoundingClientRect();
+      if (rect) {
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        const pointCount = 20;
+        wavePointsRef.current = Array.from({ length: pointCount }, (_, i) => ({
+          y: (i / (pointCount - 1)) * canvas.height,
+          targetY: (i / (pointCount - 1)) * canvas.height,
+          speed: 0,
+        }));
+      }
     };
-    
-    animationRef.current = requestAnimationFrame(animateProjectiles);
+    resize();
+    window.addEventListener('resize', resize);
+
+    let lastTime = 0;
+    const animate = (time: number) => {
+      if (time - lastTime < 16) {
+        animationRef.current = requestAnimationFrame(animate);
+        return;
+      }
+      lastTime = time;
+
+      const width = canvas.width;
+      const height = canvas.height;
+
+      ctx.fillStyle = '#050508';
+      ctx.fillRect(0, 0, width, height);
+
+      const diff = targetFrontLineXRef.current - frontLineXRef.current;
+      frontLineXRef.current += diff * 0.1;
+
+      const frontLineX = frontLineXRef.current * width;
+
+      // 更新波浪点
+      wavePointsRef.current.forEach((point, i) => {
+        const baseX = frontLineX;
+        const waveOffset = Math.sin(time * 0.003 + i * 0.5) * 30;
+        const shockOffset = Math.abs(diff) * width * 0.5 * Math.sin(time * 0.01 + i);
+
+        point.targetY = baseX + waveOffset + shockOffset;
+        point.speed = (point.targetY - point.y) * 0.1;
+        point.y += point.speed;
+      });
+
+      // 绘制势力背景
+      const longGradient = ctx.createLinearGradient(0, 0, frontLineX, 0);
+      longGradient.addColorStop(0, 'rgba(34, 197, 94, 0.2)');
+      longGradient.addColorStop(0.8, 'rgba(34, 197, 94, 0.05)');
+      longGradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
+      ctx.fillStyle = longGradient;
+      ctx.fillRect(0, 0, frontLineX, height);
+
+      const shortGradient = ctx.createLinearGradient(frontLineX, 0, width, 0);
+      shortGradient.addColorStop(0, 'rgba(239, 68, 68, 0)');
+      shortGradient.addColorStop(0.2, 'rgba(239, 68, 68, 0.05)');
+      shortGradient.addColorStop(1, 'rgba(239, 68, 68, 0.2)');
+      ctx.fillStyle = shortGradient;
+      ctx.fillRect(frontLineX, 0, width - frontLineX, height);
+
+      // 生成粒子
+      if (phase === 'fighting') {
+        const longIntensity = frontLineXRef.current;
+        for (let i = 0; i < longIntensity * 3; i++) {
+          if (Math.random() > 0.6) {
+            particlesRef.current.push({
+              id: `p-${Date.now()}-${Math.random()}`,
+              x: Math.random() * frontLineX * 0.8,
+              y: Math.random() * height,
+              vx: (1 + longIntensity * 2) * (0.5 + Math.random()),
+              vy: (Math.random() - 0.5) * 0.3,
+              size: 1.5 + Math.random() * 2,
+              alpha: 0.4 + Math.random() * 0.4,
+              side: 'long',
+            });
+          }
+        }
+
+        const shortIntensity = 1 - frontLineXRef.current;
+        for (let i = 0; i < shortIntensity * 3; i++) {
+          if (Math.random() > 0.6) {
+            particlesRef.current.push({
+              id: `p-${Date.now()}-${Math.random()}`,
+              x: frontLineX + Math.random() * (width - frontLineX) * 0.8 + (width - frontLineX) * 0.2,
+              y: Math.random() * height,
+              vx: -(1 + shortIntensity * 2) * (0.5 + Math.random()),
+              vy: (Math.random() - 0.5) * 0.3,
+              size: 1.5 + Math.random() * 2,
+              alpha: 0.4 + Math.random() * 0.4,
+              side: 'short',
+            });
+          }
+        }
+      }
+
+      // 更新和绘制粒子
+      for (let i = particlesRef.current.length - 1; i >= 0; i--) {
+        const p = particlesRef.current[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha *= 0.995;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.side === 'long'
+          ? `rgba(34, 197, 94, ${p.alpha})`
+          : `rgba(239, 68, 68, ${p.alpha})`;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
+        ctx.fillStyle = p.side === 'long'
+          ? `rgba(34, 197, 94, ${p.alpha * 0.3})`
+          : `rgba(239, 68, 68, ${p.alpha * 0.3})`;
+        ctx.fill();
+
+        if (p.x < -10 || p.x > width + 10 || p.alpha < 0.01) {
+          particlesRef.current.splice(i, 1);
+        }
+      }
+
+      // 绘制收益数字
+      const now = Date.now();
+      profitNumbersRef.current = profitNumbersRef.current.filter(pn => now - pn.timestamp < 1500);
+
+      profitNumbersRef.current.forEach(pn => {
+        const age = (now - pn.timestamp) / 1500;
+        const alpha = 1 - age;
+        const yOffset = -age * 30;
+
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = pn.side === 'long'
+          ? `rgba(34, 197, 94, ${alpha})`
+          : `rgba(239, 68, 68, ${alpha})`;
+        ctx.textAlign = 'center';
+        ctx.fillText(`+${pn.amount}`, (pn.x / 100) * width, (pn.y / 100) * height + yOffset);
+      });
+
+      // 绘制波浪战线
+      ctx.beginPath();
+      ctx.moveTo(wavePointsRef.current[0]?.y || frontLineX, 0);
+
+      for (let i = 0; i < wavePointsRef.current.length - 1; i++) {
+        const point = wavePointsRef.current[i];
+        const nextPoint = wavePointsRef.current[i + 1];
+        const y = (i / (wavePointsRef.current.length - 1)) * height;
+        const nextY = ((i + 1) / (wavePointsRef.current.length - 1)) * height;
+
+        const cpX = (point.y + nextPoint.y) / 2;
+        const cpY = (y + nextY) / 2;
+
+        ctx.quadraticCurveTo(point.y, y, cpX, cpY);
+      }
+
+      const lastPoint = wavePointsRef.current[wavePointsRef.current.length - 1];
+      ctx.lineTo(lastPoint.y, height);
+
+      // 战线颜色根据多空实时变化
+      const priceDirection = priceChange > 0 ? 'up' : priceChange < 0 ? 'down' : 'neutral';
+      const lineColor = priceDirection === 'up' ? '#22c55e' : priceDirection === 'down' ? '#ef4444' : '#ffffff';
+
+      ctx.shadowColor = lineColor;
+      ctx.shadowBlur = 30;
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.beginPath();
+      ctx.moveTo(wavePointsRef.current[0]?.y || frontLineX, 0);
+      for (let i = 0; i < wavePointsRef.current.length - 1; i++) {
+        const point = wavePointsRef.current[i];
+        const nextPoint = wavePointsRef.current[i + 1];
+        const y = (i / (wavePointsRef.current.length - 1)) * height;
+        const nextY = ((i + 1) / (wavePointsRef.current.length - 1)) * height;
+        const cpX = (point.y + nextPoint.y) / 2;
+        const cpY = (y + nextY) / 2;
+        ctx.quadraticCurveTo(point.y, y, cpX, cpY);
+      }
+      ctx.lineTo(lastPoint.y, height);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+
     return () => {
+      window.removeEventListener('resize', resize);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, []);
-  
-  // 清理资金转移、余额变化和爆炸效果
-  useEffect(() => {
-    const cleanup = setInterval(() => {
-      const now = Date.now();
-      setCoinTransfers(prev => prev.filter(c => now - c.timestamp < 1500));
-      setBalanceChanges(prev => prev.filter(b => now - b.timestamp < 1200));
-      setExplosions(prev => prev.filter(e => now - e.timestamp < 500));
-    }, 100);
-    return () => clearInterval(cleanup);
-  }, []);
-  
-  // 获取坑位位置（百分比）- 使用椭圆布局避免中间和两边重叠
-  const getSlotPosition = (index: number) => {
-    // 10个位置分成上下两行，每行5个
-    const positions = [
-      // 上行 - 稍微偏上
-      { x: 20, y: 30 }, { x: 35, y: 22 }, { x: 50, y: 18 }, { x: 65, y: 22 }, { x: 80, y: 30 },
-      // 下行 - 稍微偏下
-      { x: 20, y: 70 }, { x: 35, y: 78 }, { x: 50, y: 82 }, { x: 65, y: 78 }, { x: 80, y: 70 },
-    ];
-    return positions[index] || { x: 50, y: 50 };
-  };
-  
-  const slotPositions = Array.from({ length: 10 }, (_, i) => getSlotPosition(i));
+  }, [phase]);
+
+  const isLongDominant = frontLineXRef.current > 0.55;
+  const isShortDominant = frontLineXRef.current < 0.45;
 
   return (
-    <div
-      ref={canvasRef}
-      className="relative w-full h-full rounded-2xl overflow-hidden"
-      style={{
-        background: `
-          radial-gradient(ellipse at 50% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
-          radial-gradient(ellipse at 20% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 40%),
-          radial-gradient(ellipse at 80% 20%, rgba(255, 215, 0, 0.08) 0%, transparent 40%),
-          linear-gradient(180deg, #0a0a10 0%, #050508 100%)
-        `,
-      }}
-    >
-      {/* 虚空料子纹理背景 */}
-      <div className="absolute inset-0 opacity-30"
-        style={{
-          backgroundImage: `
-            radial-gradient(circle at 25% 25%, rgba(139, 92, 246, 0.3) 0%, transparent 50%),
-            radial-gradient(circle at 75% 75%, rgba(6, 182, 212, 0.2) 0%, transparent 50%),
-            radial-gradient(circle at 50% 50%, rgba(255, 215, 0, 0.1) 0%, transparent 60%)
-          `,
-        }}
+    <div className="relative w-full h-full rounded-2xl overflow-hidden">
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full"
       />
 
-      {/* 动态粒子效果 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 rounded-full bg-luxury-purple/40 animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${2 + Math.random() * 2}s`,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* 六边形网格背景 */}
-      <div className="absolute inset-0 hex-grid opacity-30" />
-
-      {/* 竞技场背景装饰 */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        {/* 外圈 - 发光效果 */}
-        <div className="absolute w-[92%] h-[92%] border border-luxury-purple/20 rounded-full shadow-[0_0_30px_rgba(139,92,246,0.1)]" />
-        <div className="absolute w-[92%] h-[92%] border border-luxury-purple/10 rounded-full animate-spin-slow" style={{ animationDuration: '60s' }} />
-
-        {/* 中圈 - 发光效果 */}
-        <div className="absolute w-[72%] h-[72%] border border-luxury-cyan/20 rounded-full shadow-[0_0_20px_rgba(6,182,212,0.1)]" />
-        <div className="absolute w-[72%] h-[72%] border border-luxury-cyan/10 rounded-full animate-spin-slow" style={{ animationDuration: '45s', animationDirection: 'reverse' }} />
-
-        {/* 内圈 - 发光效果 */}
-        <div className="absolute w-[48%] h-[48%] border border-luxury-gold/20 rounded-full shadow-[0_0_15px_rgba(255,215,0,0.1)]" />
-        <div className="absolute w-[48%] h-[48%] border border-luxury-gold/10 rounded-full animate-spin-slow" style={{ animationDuration: '30s' }} />
-
-        {/* 中心标志 - 虚空料子效果 */}
-        <div className="absolute w-28 h-28 rounded-full bg-gradient-to-br from-luxury-purple/20 via-luxury-cyan/10 to-luxury-gold/20 border border-luxury-purple/30 flex items-center justify-center shadow-[0_0_40px_rgba(139,92,246,0.2)]">
-          <div className="absolute inset-0 rounded-full animate-pulse bg-gradient-to-br from-luxury-purple/10 to-transparent" />
-          <Swords className="w-12 h-12 text-luxury-purple/40" />
+      {/* 中心价格 */}
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center z-10">
+        <div className={`text-4xl font-bold font-mono tracking-tight transition-all duration-300 ${
+          isLongDominant ? 'text-green-400 drop-shadow-[0_0_20px_rgba(34,197,94,0.6)]' :
+          isShortDominant ? 'text-red-400 drop-shadow-[0_0_20px_rgba(239,68,68,0.6)]' :
+          'text-white'
+        }`}>
+          ${currentPrice.toFixed(2)}
         </div>
-
-        {/* 装饰线条 - 增强发光 */}
-        {[0, 45, 90, 135].map(angle => (
-          <div
-            key={angle}
-            className="absolute w-full h-px bg-gradient-to-r from-transparent via-luxury-purple/20 to-transparent"
-            style={{ transform: `rotate(${angle}deg)` }}
-          />
-        ))}
-      </div>
-      
-      {/* 坑位 */}
-      {slotPositions.map((pos, index) => {
-        const participant = participants[index];
-        const isSelected = selectedSlots.includes(index);
-        const isLit = phase === 'selecting' && isSelected;
-        const isAttacking = participant && attackingAgents.has(participant.id);
-        const isHurt = participant && hurtAgents.has(participant.id);
-        const isDead = participant && participant.balance <= 0;
-        const isMyAgent = participant?.isPlayer;
-        const isJustSeated = phase === 'selecting' && isSelected && participant;
-        const isDefending = participant && defendingAgents.has(participant.id);
-
-        return (
-          <div
-            key={index}
-            className={`absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ${
-              isLit ? 'scale-110 z-10' : 'scale-100'
-            } ${isMyAgent ? 'z-20' : 'z-10'}`}
-            style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-          >
-            {/* 选中光环 */}
-            {isLit && (
-              <div className="absolute inset-0 w-20 h-20 -translate-x-2 -translate-y-2">
-                <div className="absolute inset-0 bg-luxury-gold/20 rounded-full animate-ping" />
-                <div className="absolute inset-2 bg-luxury-gold/10 rounded-full animate-pulse" />
-              </div>
-            )}
-
-            {/* 落座动画光环 */}
-            {isJustSeated && (
-              <div className="absolute inset-0 w-20 h-20 -translate-x-2 -translate-y-2 pointer-events-none">
-                <div className="absolute inset-0 bg-luxury-gold/40 rounded-full animate-ping" style={{ animationDuration: '0.5s' }} />
-                <div className="absolute -inset-2 border-4 border-luxury-gold/60 rounded-3xl animate-pulse" style={{ animationDuration: '0.3s' }} />
-              </div>
-            )}
-
-            {/* 用户 Agent 特殊光环 */}
-            {isMyAgent && !isDead && (
-              <div className="absolute inset-0 w-20 h-20 -translate-x-2 -translate-y-2 pointer-events-none">
-                <div className="absolute inset-0 bg-luxury-cyan/30 rounded-full animate-pulse" style={{ animationDuration: '2s' }} />
-                <div className="absolute -inset-1 border-2 border-luxury-cyan/50 rounded-2xl animate-ping" style={{ animationDuration: '3s' }} />
-              </div>
-            )}
-
-            {/* 坑位底座 */}
-            <div
-              className={`relative w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300 overflow-hidden ${
-                isLit
-                  ? 'bg-luxury-gold/20 shadow-lg shadow-luxury-gold/30'
-                  : isMyAgent
-                    ? 'bg-luxury-cyan/20 shadow-lg shadow-luxury-cyan/30'
-                    : 'bg-void-panel/80'
-              } ${
-                participant
-                  ? 'border-2'
-                  : 'border border-dashed border-white/10'
-              } ${
-                isDead ? 'opacity-40 grayscale' : ''
-              } ${
-                isHurt ? 'animate-shake' : ''
-              } ${
-                isJustSeated ? 'animate-bounce' : ''
-              }`}
-              style={{
-                borderColor: isMyAgent ? '#22d3ee' : (participant?.color || 'rgba(255,255,255,0.1)'),
-                boxShadow: participant && !isDead
-                  ? isMyAgent
-                    ? '0 0 30px rgba(34, 211, 238, 0.4), inset 0 0 20px rgba(34, 211, 238, 0.2)'
-                    : isJustSeated
-                      ? '0 0 40px rgba(255, 215, 0, 0.6), inset 0 0 30px rgba(255, 215, 0, 0.3)'
-                      : `0 0 20px ${participant.color}30, inset 0 0 20px ${participant.color}10`
-                  : 'none'
-              }}
-            >
-              {participant ? (
-                <div className={`w-full h-full flex items-center justify-center transition-all duration-300 ${isJustSeated ? 'scale-125' : 'scale-100'}`}>
-                  <PixelAgent
-                    key={`${participant.id}-${participant.balance}`}
-                    agent={participant}
-                    size={60}
-                    showBalance={true}
-                    isAttacking={isAttacking}
-                    isHurt={isHurt}
-                    isDefending={isDefending}
-                  />
-                </div>
-              ) : (
-                <span className="text-white/20 text-xl font-mono">{index + 1}</span>
-              )}
-
-              {/* 死亡标记 */}
-              {isDead && (
-                <div className="absolute inset-0 flex items-center justify-center bg-void/60 z-20">
-                  <span className="text-2xl">💀</span>
-                </div>
-              )}
-
-              {/* 我的 Agent 标记 */}
-              {isMyAgent && !isDead && (
-                <div className="absolute top-0 right-0 w-4 h-4 bg-luxury-cyan rounded-bl-lg flex items-center justify-center z-20">
-                  <span className="text-[8px] font-bold text-void">我</span>
-                </div>
-              )}
+        <div className="mt-2 flex items-center justify-center gap-2">
+          {isLongDominant && (
+            <div className="px-3 py-1 bg-green-500/30 rounded-full text-xs font-bold text-green-400 animate-pulse">
+              ▲ BULLS SURGING
             </div>
-            
-            {/* Agent 名称 */}
-            {participant && (
-              <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap z-30">
-                <span 
-                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border backdrop-blur-sm ${
-                    isMyAgent 
-                      ? 'bg-luxury-cyan/10 border-luxury-cyan/30 text-luxury-cyan' 
-                      : 'bg-black/40 border-white/10 text-white/80'
-                  }`}
-                  style={{ 
-                    color: isDead ? '#666' : (isMyAgent ? '#22d3ee' : participant.color),
-                  }}
-                >
-                  {participant.name.slice(0, 8)}
-                </span>
-              </div>
-            )}
-          </div>
-        );
-      })}
-      
-      {/* 子弹特效 */}
-      {projectiles.map(p => {
-        const x = p.fromX + (p.toX - p.fromX) * p.progress;
-        const y = p.fromY + (p.toY - p.fromY) * p.progress;
-        return (
-          <div
-            key={p.id}
-            className="absolute pointer-events-none z-20"
-            style={{
-              left: `${x}%`,
-              top: `${y}%`,
-              transform: 'translate(-50%, -50%)',
-            }}
-          >
-            {/* 子弹核心 */}
-            <div 
-              className="w-3 h-3 rounded-full"
-              style={{
-                backgroundColor: p.color,
-                boxShadow: `0 0 15px ${p.color}, 0 0 30px ${p.color}, 0 0 45px ${p.color}`,
-              }}
-            />
-            {/* 子弹尾迹 */}
-            <div 
-              className="absolute w-8 h-1.5 -left-8 top-1/2 -translate-y-1/2 rounded-full"
-              style={{
-                background: `linear-gradient(to right, transparent, ${p.color})`,
-                opacity: 0.7,
-              }}
-            />
-          </div>
-        );
-      })}
-      
-      {/* 资金转移效果 */}
-      {coinTransfers.map(c => (
-        <div
-          key={c.id}
-          className="absolute pointer-events-none z-35 animate-coin-float"
-          style={{
-            left: `${c.x}%`,
-            top: `${c.y}%`,
-            transform: 'translate(-50%, -50%)',
-            animation: 'coin-float 1.5s ease-out forwards',
-          }}
-        >
-          <div className="flex items-center gap-1 bg-luxury-gold/90 text-void px-2 py-1 rounded-full shadow-lg shadow-luxury-gold/50">
-            <Coins className="w-3 h-3" />
-            <span className="text-xs font-bold font-mono">+{c.amount}</span>
-          </div>
+          )}
+          {isShortDominant && (
+            <div className="px-3 py-1 bg-red-500/30 rounded-full text-xs font-bold text-red-400 animate-pulse">
+              ▼ BEARS SURGING
+            </div>
+          )}
         </div>
-      ))}
+      </div>
 
-      {/* 余额变化效果 - 精致简洁 */}
-      {balanceChanges.map(b => (
-        <div
-          key={b.id}
-          className="absolute pointer-events-none z-50"
-          style={{
-            left: `${b.x}%`,
-            top: `${b.y}%`,
-            transform: 'translate(-50%, -50%)',
-            animation: 'balance-float 1.2s ease-out forwards',
-          }}
-        >
-          <div className={`px-2 py-0.5 rounded-md text-xs font-medium font-mono ${
-            b.isGain
-              ? 'text-luxury-green'
-              : 'text-luxury-rose'
-          }`}
-          style={{
-            textShadow: b.isGain
-              ? '0 0 8px rgba(34, 197, 94, 0.6), 0 0 16px rgba(34, 197, 94, 0.3)'
-              : '0 0 8px rgba(244, 63, 94, 0.6), 0 0 16px rgba(244, 63, 94, 0.3)',
-          }}>
-            {b.isGain ? '+' : '-'}{b.amount} $MON
-          </div>
-        </div>
-      ))}
-      
-      {/* 爆炸效果 */}
-      {explosions.map(e => (
-        <div
-          key={e.id}
-          className="absolute pointer-events-none z-20"
-          style={{
-            left: `${e.x}%`,
-            top: `${e.y}%`,
-            transform: 'translate(-50%, -50%)',
-          }}
-        >
-          <div className="explosion w-24 h-24 rounded-full bg-gradient-radial from-luxury-gold via-luxury-amber to-transparent opacity-90" />
-          <div className="absolute inset-0 flex items-center justify-center text-3xl animate-ping">
-            💥
-          </div>
-        </div>
-      ))}
-      
-      {/* 进度条加载 - 只在 loading 阶段显示 */}
+      {/* 状态覆盖层 */}
       {phase === 'loading' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-void/80 backdrop-blur-sm z-40">
-          <div className="text-center w-80">
-            <div className="text-xl font-bold text-luxury-gold font-display mb-6">
-              进入战场
-            </div>
-            {/* 进度条容器 */}
-            <div className="w-full h-3 bg-void-panel rounded-full overflow-hidden border border-luxury-gold/30">
-              <div
-                className="h-full bg-gradient-to-r from-luxury-gold via-luxury-amber to-luxury-gold transition-all duration-100 ease-out"
-                style={{
-                  width: `${countdown}%`,
-                  boxShadow: '0 0 20px rgba(255, 215, 0, 0.5)',
-                }}
-              />
-            </div>
-            {/* 进度百分比 */}
-            <div className="text-sm text-white/60 mt-3 font-mono">
-              {countdown}%
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* 选择参赛者提示 */}
-      {phase === 'selecting' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-void/60 backdrop-blur-sm z-40">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-40">
           <div className="text-center">
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <div className="w-4 h-4 bg-luxury-gold rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <div className="w-4 h-4 bg-luxury-gold rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <div className="w-4 h-4 bg-luxury-gold rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-            </div>
-            <div className="text-3xl font-bold text-luxury-gold font-display">
-              正在选择参赛者
-            </div>
-            <div className="text-base text-white/40 mt-3">
-              随机抽取 10 名选手
+            <div className="text-2xl font-bold text-yellow-400 mb-3">Preparing Battlefield...</div>
+            <div className="w-56 h-3 bg-gray-800 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full transition-all" style={{ width: `${countdown}%` }} />
             </div>
           </div>
         </div>
       )}
-      
-      {/* 等待状态 */}
+
+      {phase === 'selecting' && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-40">
+          <div className="text-2xl font-bold text-white">Selecting Warriors...</div>
+        </div>
+      )}
+
       {phase === 'waiting' && (
         <div className="absolute inset-0 flex items-center justify-center z-30">
-          <div className="text-center">
-            <div className="w-20 h-20 rounded-2xl bg-void-panel/80 border border-luxury-purple/20 flex items-center justify-center mx-auto mb-3">
-              <div className="w-3 h-3 bg-luxury-purple rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <div className="w-3 h-3 bg-luxury-cyan rounded-full animate-bounce mx-2" style={{ animationDelay: '150ms' }} />
-              <div className="w-3 h-3 bg-luxury-gold rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-            </div>
-            <p className="text-base text-white/60 font-medium">Waiting for next round</p>
-          </div>
+          <div className="text-white/40 text-xl">Waiting for Battle...</div>
         </div>
-      )}
-      
-      {/* 战斗中状态指示器 */}
-      {phase === 'fighting' && (
-        <>
-          {/* 战斗倒计时 */}
-          <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-luxury-cyan/10 border border-luxury-cyan/30 rounded-lg z-20">
-            <Timer className="w-3.5 h-3.5 text-luxury-cyan animate-pulse" />
-            <span className="text-sm font-bold text-luxury-cyan font-mono">{countdown}s</span>
-          </div>
-        </>
       )}
     </div>
   );

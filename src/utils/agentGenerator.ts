@@ -1,22 +1,24 @@
-import { Agent, BattleRecord, Rarity } from '../types';
+import { Agent, BattleRecord, Rarity, Position, TradingStyle } from '../types';
+import { generateTradingStrategy, selectLeverage, selectPosition, calculateLiquidationPrice } from './pnlCalculator';
+import { priceService } from '../services/priceService';
 
 // 英文代号前缀
 const codePrefixes = ['CYBER', 'NEON', 'QUANTUM', 'PHANTOM', 'STEEL', 'SHADOW', 'FLAME', 'FROST', 'STORM', 'VIPER', 'RAPTOR', 'TITAN', 'NOVA', 'SOLAR', 'LUNAR', 'COSMIC', 'VOID', 'AETHER', 'ZENITH', 'NEXUS'];
 // 英文代号后缀
 const codeSuffixes = ['X', 'Z', 'V', 'S', 'R', 'K', 'N', 'M', 'P', 'T', '7', '9', '01', '02', '03', 'X1', 'Z9', 'V2', 'A1', 'ZERO'];
 
-// Agent 颜色
+// Agent 颜色 - 做多/做空阵营颜色
 const agentColors = [
-  '#ef4444', // 红
-  '#f97316', // 橙
-  '#eab308', // 黄
-  '#22c55e', // 绿
-  '#22d3ee', // 青
-  '#3b82f6', // 蓝
-  '#a855f7', // 紫
-  '#ec4899', // 粉
-  '#f43f5e', // 玫红
-  '#14b8a6', // 青绿
+  '#22c55e', // 做多绿
+  '#16a34a', // 深绿
+  '#15803d', // 更深绿
+  '#ef4444', // 做空红
+  '#dc2626', // 深红
+  '#b91c1c', // 更深红
+  '#a855f7', // 紫色
+  '#ec4899', // 粉色
+  '#f59e0b', // 橙色
+  '#22d3ee', // 青色
 ];
 
 // 稀有度配置
@@ -111,6 +113,40 @@ const generateStats = () => {
   return { attack, defense, speed, critRate, critDamage, evasion, accuracy, luck, totalStats: total, rarity };
 };
 
+// 生成交易属性（Monad Perps 新增）
+const generateTradingAttributes = (riskTolerance?: number) => {
+  // 风险偏好 (1-100)
+  const tolerance = riskTolerance ?? Math.floor(Math.random() * 100) + 1;
+
+  // 生成交易策略
+  const strategy = generateTradingStrategy(tolerance);
+
+  // 选择杠杆
+  const leverage = selectLeverage(strategy);
+
+  // 选择持仓方向
+  const position = selectPosition();
+
+  // 获取当前价格作为入场价
+  const entryPrice = priceService.getCurrentPrice() || 97245.32;
+
+  // 计算爆仓价格
+  const liquidationPrice = calculateLiquidationPrice({
+    position,
+    leverage,
+    entryPrice,
+  } as Agent);
+
+  return {
+    riskTolerance: tolerance,
+    tradingStyle: strategy.type,
+    leverage,
+    position,
+    entryPrice,
+    liquidationPrice,
+  };
+};
+
 // 生成战斗历史记录
 const generateBattleHistory = (wins: number, losses: number): BattleRecord[] => {
   const history: BattleRecord[] = [];
@@ -130,6 +166,11 @@ const generateBattleHistory = (wins: number, losses: number): BattleRecord[] => 
       isTournament: Math.random() > 0.7,
       tournamentName: Math.random() > 0.7 ? `Tournament #${Math.floor(Math.random() * 100)}` : undefined,
       rank: Math.random() > 0.7 ? Math.floor(Math.random() * 10) + 1 : undefined,
+      // Perps 新增
+      position: Math.random() > 0.5 ? 'long' : 'short',
+      leverage: [1, 2, 5, 10, 20][Math.floor(Math.random() * 5)],
+      pnl: isWin ? Math.random() * 100 : -Math.random() * 50,
+      liquidation: !isWin && Math.random() > 0.9,
     });
   }
 
@@ -201,6 +242,9 @@ export const generateRandomAgent = (isPlayer: boolean = false, isNew: boolean = 
     ? generateUserAgentName(userNickname, nftId)
     : generateName(nftId);
 
+  // 生成交易属性（Monad Perps）
+  const tradingAttrs = generateTradingAttributes();
+
   return {
     id: generateId(),
     name: agentName,
@@ -214,6 +258,9 @@ export const generateRandomAgent = (isPlayer: boolean = false, isNew: boolean = 
     maxHp: baseHp,
     // 经济
     balance: 0,
+    initialBalance: 0,
+    // Monad Perps 交易属性
+    ...tradingAttrs,
     // 基础统计
     wins,
     losses,
@@ -246,6 +293,7 @@ export const generateSystemAgents = (count: number): Agent[] => {
   return Array.from({ length: count }, () => {
     const agent = generateRandomAgent(false);
     agent.balance = 50 + Math.floor(Math.random() * 200); // 50-250 余额
+    agent.initialBalance = agent.balance;
     agent.status = 'in_arena';
     return agent;
   });
@@ -297,6 +345,9 @@ export const generateTournamentAgents = (count: number, startIndex: number = 0):
     const luck = 10 + Math.floor(Math.random() * 10);
     const totalStats = attack + defense + speed + critRate + critDamage + evasion + accuracy + luck;
 
+    // 生成交易属性
+    const tradingAttrs = generateTradingAttributes();
+
     const agent: Agent = {
       id: `tournament-${index}-${Math.random().toString(36).substr(2, 6)}`,
       name: `${prefix}${suffix}#${index + 1}`,
@@ -316,6 +367,9 @@ export const generateTournamentAgents = (count: number, startIndex: number = 0):
       totalStats,
       rarity: ['common', 'rare', 'epic', 'legendary', 'mythic'][Math.floor(Math.random() * 5)] as Rarity,
       balance: 500 + Math.floor(Math.random() * 500), // 500-1000 余额，足够报名
+      initialBalance: 500 + Math.floor(Math.random() * 500),
+      // Monad Perps 交易属性
+      ...tradingAttrs,
       // 基础统计
       wins,
       losses,

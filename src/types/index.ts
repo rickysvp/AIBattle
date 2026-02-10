@@ -1,54 +1,155 @@
 // 稀有度类型
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
+// ============ Monad Perps 新增类型 ============
+
+// 持仓方向: 做多/做空
+export type Position = 'long' | 'short';
+
+// 交易风格
+export type TradingStyle = 'trend_follower' | 'contrarian' | 'scalper' | 'hodler';
+
+// 支持的币种类型
+export type CryptoSymbol = 'BTC' | 'ETH' | 'SOL' | 'MON';
+
+// 单个币种价格数据
+export interface CryptoPrice {
+  symbol: CryptoSymbol;
+  price: number;
+  priceChange24h: number;
+  priceChangePercent24h: number;
+  fundingRate: number;
+  longShortRatio: number;
+  high24h: number;
+  low24h: number;
+  volume24h: number;
+  lastUpdate: number;
+}
+
+// 多币种价格数据
+export interface PriceData {
+  // 主币种（当前选中的交易对）
+  symbol: CryptoSymbol;
+  price: number;
+  priceChange24h: number;
+  priceChangePercent24h: number;
+  // 每秒涨跌（与上一秒对比）
+  secondChangePercent: number;
+  fundingRate: number;
+  longShortRatio: number;
+  high24h: number;
+  low24h: number;
+  volume24h: number;
+  lastUpdate: number;
+  // 兼容旧代码的字段
+  btcPrice: number;
+  // 所有币种数据
+  cryptos: Record<CryptoSymbol, CryptoPrice>;
+}
+
+// 价格历史数据点
+export interface PricePoint {
+  price: number;
+  timestamp: number;
+}
+
+// 交易策略
+export interface TradingStrategy {
+  type: TradingStyle;
+  entryThreshold: number;
+  exitThreshold: number;
+  stopLoss: number;
+  maxLeverage: number;
+  description: string;
+}
+
+// 结算结果
+export interface SettlementResult {
+  winners: Agent[];
+  losers: Agent[];
+  totalLoot: number;
+  liquidated: Agent[];
+  priceChange: number;
+  winningSide: Position;
+}
+
+// 战斗效果
+export interface BattleEffect {
+  id: string;
+  type: 'price_up' | 'price_down' | 'liquidation' | 'profit' | 'loss' | 'funding';
+  fromAgent?: Agent;
+  toAgent?: Agent;
+  amount: number;
+  position: Position;
+  timestamp: number;
+}
+
+// ============ 原有类型定义（保留并扩展） ============
+
 // Agent 类型定义
 export interface Agent {
   id: string;
   name: string;
-  nftId: number;       // NFT编号
+  nftId: number;
   color: string;
-  image?: string;      // NFT头像图片路径
-  // 基础属性 (11-99, 总和<333)
-  attack: number;      // 攻击力
-  defense: number;     // 防御力
-  speed: number;       // 速度
-  critRate: number;    // 暴击率
-  critDamage: number;  // 暴击伤害
-  evasion: number;     // 闪避率
-  accuracy: number;    // 命中率
-  luck: number;        // 幸运值
-  totalStats: number;  // 属性总和
-  rarity: Rarity;      // 稀有度
-  // 战斗属性
+  image?: string;
+
+  // ===== 基础属性（保留用于兼容性） =====
+  attack: number;
+  defense: number;
+  speed: number;
+  critRate: number;
+  critDamage: number;
+  evasion: number;
+  accuracy: number;
+  luck: number;
+  totalStats: number;
+  rarity: Rarity;
+
+  // ===== 战斗属性（保留用于兼容性） =====
   hp: number;
   maxHp: number;
-  // 经济
+
+  // ===== 经济属性 =====
   balance: number;
-  // 基础统计
+  initialBalance: number;
+
+  // ===== Monad Perps 新增交易属性 =====
+  position: Position;
+  leverage: number;
+  entryPrice: number;
+  liquidationPrice: number;
+  tradingStyle: TradingStyle;
+  riskTolerance: number;
+
+  // ===== 基础统计 =====
   wins: number;
   losses: number;
   kills: number;
   deaths: number;
-  // 详细统计
+
+  // ===== 详细统计 =====
   totalBattles: number;
-  winRate: number; // 胜率百分比
-  totalEarnings: number; // 总收益
-  totalLosses: number; // 总亏损
-  netProfit: number; // 净利润
-  avgDamageDealt: number; // 平均造成伤害
-  avgDamageTaken: number; // 平均承受伤害
-  maxKillStreak: number; // 最高连杀
-  currentKillStreak: number; // 当前连杀
-  tournamentWins: number; // 锦标赛冠军次数
-  tournamentTop3: number; // 锦标赛前三次数
-  // 历史记录
+  winRate: number;
+  totalEarnings: number;
+  totalLosses: number;
+  netProfit: number;
+  avgDamageDealt: number;
+  avgDamageTaken: number;
+  maxKillStreak: number;
+  currentKillStreak: number;
+  tournamentWins: number;
+  tournamentTop3: number;
+
+  // ===== 历史记录 =====
   battleHistory: BattleRecord[];
-  // 状态
-  status: 'idle' | 'in_arena' | 'fighting' | 'eliminated';
-  position?: { x: number; y: number };
+
+  // ===== 状态 =====
+  status: 'idle' | 'in_arena' | 'fighting' | 'eliminated' | 'liquidated';
+  coordinates?: { x: number; y: number };
   isPlayer: boolean;
-  pixelStyle: number; // 像素风格变体
-  createdAt: number; // 创建时间
+  pixelStyle: number;
+  createdAt: number;
 }
 
 // 战斗记录
@@ -64,18 +165,27 @@ export interface BattleRecord {
   isTournament: boolean;
   tournamentName?: string;
   rank?: number;
+  // Perps 新增
+  position?: Position;
+  leverage?: number;
+  pnl?: number;
+  liquidation?: boolean;
 }
 
 // 战斗日志类型
 export interface BattleLog {
   id: string;
   timestamp: number;
-  type: 'attack' | 'eliminate' | 'damage' | 'round_start' | 'round_end' | 'join' | 'leave';
+  type: 'attack' | 'eliminate' | 'damage' | 'round_start' | 'round_end' | 'join' | 'leave' | 'liquidation' | 'funding';
   attacker?: Agent;
   defender?: Agent;
   damage?: number;
   message: string;
   isHighlight?: boolean;
+  // Perps 新增
+  position?: Position;
+  pnl?: number;
+  priceChange?: number;
 }
 
 // 战斗轮次状态
@@ -90,6 +200,15 @@ export interface ArenaState {
   selectedSlots: number[];
   battleLogs: BattleLog[];
   top3: { agent: Agent; profit: number }[];
+  // Perps 新增
+  currentPrice: number;
+  priceChange24h: number;
+  fundingRate: number;
+  longShortRatio: number;
+  battleEffects: BattleEffect[];
+  // 多币种支持
+  activeSymbol: CryptoSymbol;
+  cryptoPrices: Record<CryptoSymbol, number>;
 }
 
 // 钱包状态
@@ -101,7 +220,7 @@ export interface WalletState {
   loginType: 'twitter' | 'google' | 'wallet' | null;
   nickname: string;
   avatar: string;
-  userId?: string; // Supabase 用户 ID
+  userId?: string;
 }
 
 // 用户类型
@@ -118,91 +237,6 @@ export interface User {
   createdAt: number;
 }
 
-// 锦标赛类型
-export type TournamentType = 'challenge' | 'daily' | 'weekly';
-export type TournamentStatus = 'upcoming' | 'registration' | 'ongoing' | 'finished';
-export type TournamentRound = 'round128' | 'round32' | 'round8' | 'semifinal' | 'final';
-
-// 锦标赛报名记录
-export interface TournamentEntry {
-  id: string;
-  tournamentId: string;
-  userId: string;
-  agentId: string;
-  agent: Agent;
-  entryFee: number;
-  registeredAt: number;
-  eliminatedAt?: number;
-  finalRank?: number;
-  prize?: number;
-}
-
-// 锦标赛对阵
-export interface TournamentMatch {
-  id: string;
-  tournamentId: string;
-  round: TournamentRound;
-  matchIndex: number;
-  agentA?: Agent;
-  agentB?: Agent;
-  winnerId?: string;
-  startTime?: number;
-  endTime?: number;
-  bets?: PredictionBet[];
-}
-
-// 锦标赛类型
-export interface Tournament {
-  id: string;
-  name: string;
-  type: TournamentType;
-  status: TournamentStatus;
-  prizePool: number;
-  participants: Agent[];
-  maxParticipants: number;
-  startTime: number;
-  endTime?: number;
-  entryFee: number;
-  winners?: { agent: Agent; prize: number; rank: number }[];
-  currentRound: TournamentRound;
-  matches: TournamentMatch[];
-  qualifiedAgents: Agent[];
-  history?: TournamentHistory;
-}
-
-// 锦标赛历史记录
-export interface TournamentHistory {
-  tournamentId: string;
-  type: TournamentType;
-  name: string;
-  startTime: number;
-  endTime: number;
-  totalParticipants: number;
-  winner: Agent;
-  prizePool: number;
-  matches: TournamentMatch[];
-}
-
-// 锦标赛自动化设置
-export interface TournamentAutoSettings {
-  enabled: boolean;
-  challenge: {
-    enabled: boolean;
-    preferredAgentId?: string;
-    autoSelect: boolean;
-  };
-  daily: {
-    enabled: boolean;
-    preferredAgentId?: string;
-    autoSelect: boolean;
-  };
-  weekly: {
-    enabled: boolean;
-    preferredAgentId?: string;
-    autoSelect: boolean;
-  };
-}
-
 // 子弹/攻击特效
 export interface Projectile {
   id: string;
@@ -212,6 +246,7 @@ export interface Projectile {
   toY: number;
   color: string;
   progress: number;
+  type: 'bull' | 'bear' | 'neutral';
 }
 
 // 伤害飘字
@@ -231,9 +266,11 @@ export interface CoinTransfer {
   y: number;
   amount: number;
   timestamp: number;
+  fromPosition?: Position;
+  toPosition?: Position;
 }
 
-// 余额变化飘字（加血/减血）
+// 余额变化飘字
 export interface BalanceChange {
   id: string;
   x: number;
@@ -241,6 +278,7 @@ export interface BalanceChange {
   amount: number;
   isGain: boolean;
   timestamp: number;
+  text?: string;
 }
 
 // ==================== 流动性挖矿类型 ====================
@@ -263,46 +301,4 @@ export interface LiquidityPool {
   apr: number;
   rewardRate: number;
   stakerCount: number;
-}
-
-// ==================== 预测市场类型 ====================
-
-// 预测下注
-export interface PredictionBet {
-  id: string;
-  userId: string;
-  marketId: string;
-  tournamentId: string;
-  predictedAgentId: string;
-  betAmount: number;
-  betType: 'semifinal' | 'final' | 'match';
-  odds: number;
-  status: 'pending' | 'won' | 'lost';
-  potentialWin: number;
-  createdAt: number;
-}
-
-// 预测市场
-export interface PredictionMarket {
-  id: string;
-  tournamentId: string;
-  matchId?: string;
-  name: string;
-  totalPool: number;
-  odds: Record<string, number>;
-  status: 'open' | 'closed' | 'settled';
-  deadline: number;
-  betType: 'semifinal' | 'final' | 'match';
-  participants: string[];
-}
-
-// 自动下注规则
-export interface AutoBetRule {
-  enabled: boolean;
-  betAmount: number;
-  strategy: 'always' | 'top_ranked' | 'specified';
-  maxBetsPerDay: number;
-  specifiedAgentIds?: string[];
-  minOdds?: number;
-  maxOdds?: number;
 }

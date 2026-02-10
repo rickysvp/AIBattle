@@ -26,44 +26,49 @@ const NotificationContainer: React.FC = () => {
   );
 };
 
-const NotificationItem: React.FC<{ notification: Notification; onClose: () => void }> = ({ notification, onClose }) => {
-  const icons = {
-    success: <CheckCircle className="w-4 h-4 text-luxury-green" />,
-    error: <AlertCircle className="w-4 h-4 text-luxury-rose" />,
-    warning: <AlertTriangle className="w-4 h-4 text-luxury-amber" />,
-    info: <Info className="w-4 h-4 text-luxury-cyan" />,
-  };
+const NotificationItem = React.forwardRef<HTMLDivElement, { notification: Notification; onClose: () => void }>(
+  ({ notification, onClose }, ref) => {
+    const icons = {
+      success: <CheckCircle className="w-4 h-4 text-luxury-green" />,
+      error: <AlertCircle className="w-4 h-4 text-luxury-rose" />,
+      warning: <AlertTriangle className="w-4 h-4 text-luxury-amber" />,
+      info: <Info className="w-4 h-4 text-luxury-cyan" />,
+    };
 
-  const bgColors = {
-    success: 'bg-void-panel border-luxury-green/30 shadow-luxury-green/10',
-    error: 'bg-void-panel border-luxury-rose/30 shadow-luxury-rose/10',
-    warning: 'bg-void-panel border-luxury-amber/30 shadow-luxury-amber/10',
-    info: 'bg-void-panel border-luxury-cyan/30 shadow-luxury-cyan/10',
-  };
+    const bgColors = {
+      success: 'bg-void-panel border-luxury-green/30 shadow-luxury-green/10',
+      error: 'bg-void-panel border-luxury-rose/30 shadow-luxury-rose/10',
+      warning: 'bg-void-panel border-luxury-amber/30 shadow-luxury-amber/10',
+      info: 'bg-void-panel border-luxury-cyan/30 shadow-luxury-cyan/10',
+    };
 
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 50, scale: 0.9 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 100, transition: { duration: 0.2 } }}
-      className={`pointer-events-auto flex items-start gap-2 p-3 rounded-lg border shadow-lg backdrop-blur-md ${bgColors[notification.type]}`}
-    >
-      <div className="mt-0.5 shrink-0">{icons[notification.type]}</div>
-      <div className="flex-1 min-w-0">
-        {notification.title && (
-          <h4 className="text-xs font-bold text-white mb-0.5 font-sans">{notification.title}</h4>
-        )}
-        <p className="text-xs text-white/80 break-words leading-tight font-sans">{notification.message}</p>
-      </div>
-      <button
-        onClick={onClose}
-        className="text-white/40 hover:text-white transition-colors shrink-0"
+    return (
+      <motion.div
+        ref={ref}
+        layout
+        initial={{ opacity: 0, y: 50, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, x: 100, transition: { duration: 0.2 } }}
+        className={`pointer-events-auto flex items-start gap-2 p-3 rounded-lg border shadow-lg backdrop-blur-md ${bgColors[notification.type]}`}
       >
-        <X className="w-3 h-3" />
-      </button>
-    </motion.div>
-  );
-};
+        <div className="mt-0.5 shrink-0">{icons[notification.type]}</div>
+        <div className="flex-1 min-w-0">
+          {notification.title && (
+            <h4 className="text-xs font-bold text-white mb-0.5 font-sans">{notification.title}</h4>
+          )}
+          <p className="text-xs text-white/80 break-words leading-tight font-sans">{notification.message}</p>
+        </div>
+        <button
+          onClick={onClose}
+          className="text-white/40 hover:text-white transition-colors shrink-0"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      </motion.div>
+    );
+  }
+);
+
+NotificationItem.displayName = 'NotificationItem';
 
 export default NotificationContainer;

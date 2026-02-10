@@ -1,1200 +1,326 @@
-import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { TransactionService } from '../services/database';
-import ConnectButton from '../components/ConnectButton';
-import { 
-  Wallet, 
-  TrendingUp, 
-  TrendingDown, 
-  Clock, 
-  Plus,
-  ArrowUpRight,
-  ArrowDownRight,
-  Copy,
-  RefreshCw,
-  Image,
-  Users,
-  Gift,
-  ChevronRight,
-  X,
-  QrCode,
-  AlertCircle,
-  CheckCircle,
-  Loader2,
-  Search,
-  Download,
-  ExternalLink,
-  Pickaxe
+import {
+  Wallet, TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight,
+  History, PieChart, Target, Zap, Copy, CheckCircle, Clock
 } from 'lucide-react';
 
-interface Transaction {
-  id: string;
-  type: 'mint' | 'battle_win' | 'battle_loss' | 'deposit' | 'withdraw' | 'swap';
-  amount: number;
-  timestamp: number;
-  description: string;
-  status: 'pending' | 'completed' | 'failed';
-  txHash?: string;
-}
-
-interface NFT {
-  id: string;
-  name: string;
-  image: string;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
-  value: number;
-  tokenId: string;
-  attributes: { trait: string; value: string }[];
-  obtainedAt: number;
-}
-
-interface InviteRecord {
-  id: string;
-  name: string;
-  avatar: string;
-  joinedAt: number;
-  totalDeposit: number;
-  reward: number;
-  isActive: boolean;
-}
-
-// 模拟汇率数据
-const MON_TO_USDT_RATE = 0.052;
-const MON_PRICE_CHANGE_24H = 5.23;
-
 const WalletPage: React.FC = () => {
-  const { t, i18n } = useTranslation();
-  const navigate = useNavigate();
-  const { wallet, myAgents, withdrawFunds, userStakes, calculateRewards } = useGameStore();
-  
-  // 弹窗状态
-  const [showDepositModal, setShowDepositModal] = useState(false);
-  const [showSwapModal, setShowSwapModal] = useState(false);
-  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [showNFTDetailModal, setShowNFTDetailModal] = useState(false);
-  const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
-  const [showInviteDetailModal, setShowInviteDetailModal] = useState(false);
-  const [showTxDetailModal, setShowTxDetailModal] = useState(false);
-  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
-  
-  // 交易记录筛选
-  const [txFilter, setTxFilter] = useState<'all' | 'deposit' | 'withdraw' | 'swap' | 'battle'>('all');
-  const [txSearchQuery, setTxSearchQuery] = useState('');
-  
-  // Toast通知
-  const [toast, setToast] = useState<{message: string; type: 'success' | 'error' | 'info'} | null>(null);
+  const { wallet, myAgents, deposit, withdraw, getTotalStats } = useGameStore();
+  const [amount, setAmount] = useState('');
+  const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
+  const [copied, setCopied] = useState(false);
 
-  // 加载状态
-  const [isLoading, setIsLoading] = useState<{[key: string]: boolean}>({});
+  const stats = getTotalStats();
+  const totalAgentBalance = myAgents.reduce((sum, a) => sum + a.balance, 0);
+  const totalValue = wallet.balance + totalAgentBalance;
 
-  // 真实交易记录
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
-
-  // 加载交易记录
-  useEffect(() => {
-    const loadTransactions = async () => {
-      if (!wallet.connected || !wallet.userId) {
-        setTransactions([]);
-        return;
-      }
-
-      setIsLoadingTransactions(true);
-      try {
-        const dbTransactions = await TransactionService.getUserTransactions(wallet.userId, 50);
-        const formattedTransactions: Transaction[] = dbTransactions.map(tx => ({
-          id: tx.id,
-          type: tx.type as Transaction['type'],
-          amount: tx.amount,
-          timestamp: new Date(tx.created_at).getTime(),
-          description: getTransactionDescription(tx.type),
-          status: tx.status as Transaction['status'],
-          txHash: tx.tx_hash,
-        }));
-        setTransactions(formattedTransactions);
-      } catch (error) {
-        console.error('[Wallet] Failed to load transactions:', error);
-      } finally {
-        setIsLoadingTransactions(false);
-      }
-    };
-
-    loadTransactions();
-  }, [wallet.connected, wallet.userId, wallet.balance]); // 余额变化时刷新
-
-  // 获取交易描述
-  const getTransactionDescription = (type: string): string => {
-    switch (type) {
-      case 'mint': return t('wallet.mintAgent');
-      case 'battle_win': return t('wallet.battleWin');
-      case 'battle_loss': return t('wallet.battleLoss');
-      case 'deposit': return t('wallet.deposit');
-      case 'withdraw': return t('wallet.withdraw');
-      case 'swap': return t('wallet.swap');
-      case 'stake': return t('wallet.stake');
-      case 'unstake': return t('wallet.unstake');
-      case 'reward': return t('wallet.reward');
-      default: return type;
-    }
-  };
-
-  // Monad RealNads NFT 数据 - 使用本地图片
-  const nfts: NFT[] = [
-    {
-      id: '1',
-      name: 'Cyber Agent #001',
-      image: '/nfts/nft1.png',
-      rarity: 'legendary',
-      value: 5000,
-      tokenId: '0x1234...5678',
-      attributes: [
-        { trait: 'Background', value: 'Purple' },
-        { trait: 'Eyes', value: 'Cyber' },
-        { trait: 'Mouth', value: 'Smile' },
-        { trait: 'Accessory', value: 'Headset' }
-      ],
-      obtainedAt: Date.now() - 86400000 * 30
-    },
-    {
-      id: '2',
-      name: 'Ninja Agent #002',
-      image: '/nfts/nft2.png',
-      rarity: 'epic',
-      value: 2000,
-      tokenId: '0xabcd...efgh',
-      attributes: [
-        { trait: 'Background', value: 'Orange' },
-        { trait: 'Eyes', value: 'Normal' },
-        { trait: 'Mouth', value: 'Grin' },
-        { trait: 'Accessory', value: 'Glasses' }
-      ],
-      obtainedAt: Date.now() - 86400000 * 15
-    },
-    {
-      id: '3',
-      name: 'Wizard Agent #003',
-      image: '/nfts/nft3.png',
-      rarity: 'rare',
-      value: 800,
-      tokenId: '0x9876...5432',
-      attributes: [
-        { trait: 'Background', value: 'Violet' },
-        { trait: 'Eyes', value: 'Happy' },
-        { trait: 'Mouth', value: 'Open' },
-        { trait: 'Accessory', value: 'Hat' }
-      ],
-      obtainedAt: Date.now() - 86400000 * 7
-    },
-    {
-      id: '4',
-      name: 'GMONAD Agent #004',
-      image: '/nfts/nft4.png',
-      rarity: 'epic',
-      value: 1500,
-      tokenId: '0xdefa...1234',
-      attributes: [
-        { trait: 'Background', value: 'Blue' },
-        { trait: 'Eyes', value: 'VR' },
-        { trait: 'Mouth', value: 'Cool' },
-        { trait: 'Accessory', value: 'Goggles' }
-      ],
-      obtainedAt: Date.now() - 86400000 * 3
-    },
-  ];
-  
-  // 模拟邀请记录
-  const inviteRecords: InviteRecord[] = [
-    { id: '1', name: 'PlayerOne', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=p1', joinedAt: Date.now() - 86400000 * 10, totalDeposit: 5000, reward: 100, isActive: true },
-    { id: '2', name: 'CryptoKing', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=p2', joinedAt: Date.now() - 86400000 * 5, totalDeposit: 2000, reward: 100, isActive: true },
-    { id: '3', name: 'GameMaster', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=p3', joinedAt: Date.now() - 86400000 * 2, totalDeposit: 0, reward: 0, isActive: false },
+  // 模拟交易历史
+  const transactions = [
+    { id: '1', type: 'deposit', amount: 10000, time: '2024-01-20 10:30', status: 'completed' },
+    { id: '2', type: 'mint', amount: -100, time: '2024-01-20 11:15', status: 'completed' },
+    { id: '3', type: 'allocate', amount: -500, time: '2024-01-20 11:20', status: 'completed' },
+    { id: '4', type: 'profit', amount: 45, time: '2024-01-20 12:00', status: 'completed' },
+    { id: '5', type: 'withdraw', amount: -200, time: '2024-01-20 14:30', status: 'pending' },
   ];
 
-  // 邀请码和邀请链接
-  const inviteCode = 'AI2024VIP';
-  const inviteLink = `https://aibrawl.fun?ref=${inviteCode}`;
-
-  // 复制邀请链接
-  const copyInviteLink = () => {
-    navigator.clipboard.writeText(inviteLink);
-    showToast(t('wallet.copied'), 'success');
-  };
-
-  // 分享邀请链接
-  const shareInviteLink = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: 'Join AIBattle!',
-        text: `Use my invite code ${inviteCode} to join AIBattle and get 100 $MON bonus!`,
-        url: inviteLink,
-      });
-    } else {
-      copyInviteLink();
-    }
-  };
-
-  // 一键归集所有 Agents 的余额到可用余额
-  const handleWithdrawAllFromAgents = () => {
-    myAgents.forEach(agent => {
-      if (agent.balance > 0) {
-        withdrawFunds(agent.id, agent.balance);
-      }
-    });
-    showToast(t('wallet.withdrawAllSuccess'), 'success');
-  };
-
-  const totalAssets = wallet.balance + wallet.lockedBalance;
-  const agentsTotalBalance = myAgents.reduce((sum, a) => sum + a.balance, 0);
-
-  // 计算流动性挖矿数据
-  const totalStaked = userStakes.reduce((sum, s) => sum + s.amount, 0);
-  const totalPendingRewards = userStakes.reduce((sum, s) => sum + calculateRewards(s), 0);
-
-  // 换算USDT
-  const toUSDT = (monAmount: number) => (monAmount * MON_TO_USDT_RATE).toFixed(2);
-  
-  // 显示Toast
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
-  
-  // 设置加载状态
-  const setLoading = (key: string, value: boolean) => {
-    setIsLoading(prev => ({ ...prev, [key]: value }));
-  };
-  
-  const getTransactionIcon = (type: Transaction['type']) => {
-    switch (type) {
-      case 'mint': return { icon: Plus, color: 'text-luxury-purple', bgColor: 'bg-luxury-purple' };
-      case 'battle_win': return { icon: TrendingUp, color: 'text-luxury-green', bgColor: 'bg-luxury-green' };
-      case 'battle_loss': return { icon: TrendingDown, color: 'text-luxury-rose', bgColor: 'bg-luxury-rose' };
-      case 'deposit': return { icon: ArrowDownRight, color: 'text-luxury-cyan', bgColor: 'bg-luxury-cyan' };
-      case 'withdraw': return { icon: ArrowUpRight, color: 'text-luxury-amber', bgColor: 'bg-luxury-amber' };
-      case 'swap': return { icon: RefreshCw, color: 'text-luxury-gold', bgColor: 'bg-luxury-gold' };
-    }
-  };
-
-  const getRarityColor = (rarity: NFT['rarity']) => {
-    switch (rarity) {
-      case 'legendary': return 'from-luxury-gold to-luxury-amber';
-      case 'epic': return 'from-luxury-purple to-luxury-rose';
-      case 'rare': return 'from-luxury-cyan to-luxury-blue';
-      case 'common': return 'from-white/40 to-white/20';
-    }
-  };
-  
-  const getRarityBgColor = (rarity: NFT['rarity']) => {
-    switch (rarity) {
-      case 'legendary': return 'bg-luxury-gold/20 border-luxury-gold/40';
-      case 'epic': return 'bg-luxury-purple/20 border-luxury-purple/40';
-      case 'rare': return 'bg-luxury-cyan/20 border-luxury-cyan/40';
-      case 'common': return 'bg-white/10 border-white/20';
-    }
-  };
-  
-  const formatTime = (timestamp: number) => {
-    const date = new Date(timestamp);
-    const now = Date.now();
-    const diff = now - timestamp;
-    const isZh = i18n.language === 'zh-CN';
-
-    if (diff < 60000) return isZh ? '刚刚' : 'Just now';
-    if (diff < 3600000) return isZh ? `${Math.floor(diff / 60000)}分钟前` : `${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return isZh ? `${Math.floor(diff / 3600000)}小时前` : `${Math.floor(diff / 3600000)}h ago`;
-
-    const locale = isZh ? 'zh-CN' : 'en-US';
-    return date.toLocaleString(locale, {
-      month: 'numeric',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const copyAddress = () => {
+  const handleCopyAddress = () => {
     navigator.clipboard.writeText(wallet.address);
-    showToast(t('wallet.copied'), 'success');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const copyInviteCode = () => {
-    navigator.clipboard.writeText(inviteCode);
-    showToast(t('wallet.copied'), 'success');
+  const handleDeposit = () => {
+    const value = parseFloat(amount);
+    if (value > 0) {
+      deposit(value);
+      setAmount('');
+    }
   };
 
-  // 筛选交易记录
-  const filteredTransactions = transactions.filter(tx => {
-    if (txFilter === 'all') return true;
-    if (txFilter === 'battle') return tx.type === 'battle_win' || tx.type === 'battle_loss';
-    return tx.type === txFilter;
-  }).filter(tx => 
-    txSearchQuery === '' || 
-    tx.description.toLowerCase().includes(txSearchQuery.toLowerCase()) ||
-    tx.id.includes(txSearchQuery)
-  );
-
-  // 充值弹窗组件
-  const DepositModal = () => {
-    const [selectedNetwork, setSelectedNetwork] = useState('monad');
-    
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div className="bg-void-panel rounded-2xl w-full max-w-md p-6 border border-white/10">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">{t('wallet.deposit')}</h3>
-            <button onClick={() => setShowDepositModal(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-white/60" />
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm text-white/60 mb-2 block">{t('wallet.network')}</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setSelectedNetwork('monad')}
-                  className={`p-3 rounded-xl border transition-all ${selectedNetwork === 'monad' ? 'bg-luxury-cyan/20 border-luxury-cyan' : 'border-white/10 hover:border-white/30'}`}
-                >
-                  <p className="text-sm font-medium text-white">{t('wallet.monadTestnet')}</p>
-                  <p className="text-xs text-white/40">{t('wallet.recommended')}</p>
-                </button>
-                <button
-                  onClick={() => setSelectedNetwork('ethereum')}
-                  className={`p-3 rounded-xl border transition-all ${selectedNetwork === 'ethereum' ? 'bg-luxury-cyan/20 border-luxury-cyan' : 'border-white/10 hover:border-white/30'}`}
-                >
-                  <p className="text-sm font-medium text-white">{t('wallet.ethereum')}</p>
-                  <p className="text-xs text-white/40">Mainnet</p>
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-void rounded-xl p-4 border border-white/10">
-              <label className="text-sm text-white/60 mb-2 block">{t('wallet.depositAddress')}</label>
-              <div className="flex items-center gap-2 mb-3">
-                <code className="flex-1 text-sm text-luxury-cyan font-mono bg-void-light px-3 py-2 rounded-lg truncate">
-                  {wallet.address}
-                </code>
-                <button onClick={copyAddress} className="p-2 bg-luxury-cyan/20 rounded-lg hover:bg-luxury-cyan/30 transition-colors">
-                  <Copy className="w-4 h-4 text-luxury-cyan" />
-                </button>
-              </div>
-              <div className="w-32 h-32 mx-auto bg-white rounded-xl p-2">
-                <div className="w-full h-full bg-void flex items-center justify-center">
-                  <QrCode className="w-20 h-20 text-white" />
-                </div>
-              </div>
-              <p className="text-xs text-white/40 text-center mt-2">{t('wallet.scanQR')}</p>
-            </div>
-
-            <div className="flex items-start gap-2 p-3 bg-luxury-gold/10 rounded-lg border border-luxury-gold/20">
-              <AlertCircle className="w-4 h-4 text-luxury-gold flex-shrink-0 mt-0.5" />
-              <div className="text-xs text-white/60">
-                <p className="text-luxury-gold font-medium mb-1">{t('wallet.notice')}</p>
-                <p>• {t('wallet.minDeposit')}: 10 $MON</p>
-                <p>• {t('wallet.arrivalTime')}</p>
-                <p>• {t('wallet.networkWarning')}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // SWAP弹窗组件
-  const SwapModal = () => {
-    const [fromToken, setFromToken] = useState('USDT');
-    const [toToken, setToToken] = useState('MON');
-    const [fromAmount, setFromAmount] = useState('');
-    const [slippage, setSlippage] = useState(0.5);
-    
-    const toAmount = fromAmount ? (parseFloat(fromAmount) / MON_TO_USDT_RATE).toFixed(2) : '0';
-    
-    const handleSwap = () => {
-      setLoading('swap', true);
-      setTimeout(() => {
-        setLoading('swap', false);
-        showToast('兑换成功！', 'success');
-        setShowSwapModal(false);
-      }, 2000);
-    };
-    
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div className="bg-void-panel rounded-2xl w-full max-w-md p-6 border border-white/10">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">{t('wallet.swap')}</h3>
-            <button onClick={() => setShowSwapModal(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-white/60" />
-            </button>
-          </div>
-          
-          <div className="space-y-3">
-            {/* From */}
-            <div className="bg-void rounded-xl p-4 border border-white/10">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-white/60">支付</span>
-                <span className="text-xs text-white/40">余额: 1,000 USDT</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <input 
-                  type="number" 
-                  value={fromAmount}
-                  onChange={(e) => setFromAmount(e.target.value)}
-                  placeholder="0.00"
-                  className="flex-1 bg-transparent text-2xl font-bold text-white placeholder:text-white/20 outline-none min-w-0"
-                />
-                <button 
-                  onClick={() => setFromAmount('1000')}
-                  className="text-xs px-2 py-1 bg-white/10 rounded text-white/60 hover:text-white transition-colors flex-shrink-0"
-                >
-                  MAX
-                </button>
-                <div className="flex items-center gap-2 px-3 py-2 bg-void-light rounded-lg flex-shrink-0">
-                  <div className="w-6 h-6 rounded-full bg-luxury-green flex items-center justify-center text-xs font-bold text-white">$</div>
-                  <span className="text-sm font-medium text-white">USDT</span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Arrow */}
-            <div className="flex justify-center -my-1 relative z-10">
-              <button 
-                onClick={() => { setFromToken(toToken); setToToken(fromToken); }}
-                className="p-2 bg-void-panel border border-white/20 rounded-xl hover:border-luxury-cyan/50 transition-colors"
-              >
-                <ArrowDownRight className="w-5 h-5 text-luxury-cyan rotate-45" />
-              </button>
-            </div>
-            
-            {/* To */}
-            <div className="bg-void rounded-xl p-4 border border-white/10">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-white/60">获得</span>
-                <span className="text-xs text-white/40">余额: {wallet.balance.toLocaleString()} MON</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <input 
-                  type="text" 
-                  value={toAmount}
-                  readOnly
-                  className="flex-1 bg-transparent text-2xl font-bold text-luxury-cyan outline-none min-w-0"
-                />
-                <div className="flex items-center gap-2 px-3 py-2 bg-void-light rounded-lg flex-shrink-0">
-                  <div className="w-6 h-6 rounded-full bg-luxury-gold flex items-center justify-center text-xs font-bold text-white">M</div>
-                  <span className="text-sm font-medium text-white">MON</span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Rate & Slippage */}
-            <div className="p-3 bg-void rounded-lg border border-white/5 space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-white/40">汇率</span>
-                <span className="text-white">1 USDT = {(1/MON_TO_USDT_RATE).toFixed(2)} MON</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-white/40">滑点容忍度</span>
-                <div className="flex gap-2">
-                  {[0.5, 1, 3].map(s => (
-                    <button 
-                      key={s}
-                      onClick={() => setSlippage(s)}
-                      className={`px-2 py-1 rounded text-xs transition-colors ${slippage === s ? 'bg-luxury-cyan text-white' : 'bg-white/10 text-white/60'}`}
-                    >
-                      {s}%
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            
-            <button 
-              onClick={handleSwap}
-              disabled={!fromAmount || parseFloat(fromAmount) <= 0 || isLoading['swap']}
-              className="w-full py-3 rounded-xl bg-luxury-gold text-white font-bold text-lg hover:bg-luxury-gold/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-4"
-            >
-              {isLoading['swap'] ? <Loader2 className="w-5 h-5 animate-spin" /> : t('wallet.confirmSwap')}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // 提现弹窗组件
-  const WithdrawModal = () => {
-    const [address, setAddress] = useState('');
-    const [amount, setAmount] = useState('');
-    const [savedAddresses] = useState([
-      { name: '我的MetaMask', address: '0x742d...44e' },
-      { name: '交易所', address: '0x1234...5678' }
-    ]);
-    
-    const fee = 2;
-    const receiveAmount = amount ? Math.max(0, parseFloat(amount) - fee).toFixed(2) : '0';
-    
-    const handleWithdraw = () => {
-      setLoading('withdraw', true);
-      setTimeout(() => {
-        setLoading('withdraw', false);
-        showToast('提现申请已提交', 'success');
-        setShowWithdrawModal(false);
-      }, 2000);
-    };
-    
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div className="bg-void-panel rounded-2xl w-full max-w-md p-6 border border-white/10">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">{t('wallet.withdraw')}</h3>
-            <button onClick={() => setShowWithdrawModal(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-white/60" />
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {/* Address */}
-            <div>
-              <label className="text-sm text-white/60 mb-2 block">{t('wallet.withdrawAddress')}</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder={t('wallet.enterAddress')}
-                  className="w-full bg-void border border-white/10 rounded-xl px-4 py-3 pr-16 text-white placeholder:text-white/30 focus:border-luxury-cyan focus:outline-none"
-                />
-                <button className="absolute right-3 top-1/2 -translate-y-1/2 text-xs px-2 py-1 bg-white/10 rounded text-luxury-cyan hover:bg-white/20 transition-colors">
-                  {t('wallet.addressBook')}
-                </button>
-              </div>
-              {/* Saved addresses */}
-              {savedAddresses.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {savedAddresses.map((saved, idx) => (
-                    <button 
-                      key={idx}
-                      onClick={() => setAddress(saved.address)}
-                      className="text-xs px-3 py-1.5 bg-white/5 rounded-lg text-white/60 hover:bg-white/10 hover:text-white transition-colors border border-white/5"
-                    >
-                      {saved.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            {/* Amount */}
-            <div>
-              <label className="text-sm text-white/60 mb-2 block">{t('wallet.withdrawAmount')}</label>
-              <div className="bg-void rounded-xl p-4 border border-white/10">
-                <div className="flex items-center justify-between mb-3">
-                  <input
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    className="flex-1 bg-transparent text-2xl font-bold text-white placeholder:text-white/20 outline-none min-w-0"
-                  />
-                  <button
-                    onClick={() => setAmount(wallet.balance.toString())}
-                    className="text-xs px-3 py-1.5 bg-luxury-cyan/20 rounded-lg text-luxury-cyan hover:bg-luxury-cyan/30 transition-colors flex-shrink-0"
-                  >
-                    {t('wallet.max')}
-                  </button>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-white/40">≈ ${toUSDT(parseFloat(amount) || 0)} USDT</span>
-                  <span className="text-white/40">{t('wallet.availableBalance')}: {wallet.balance.toLocaleString()} MON</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Fee info */}
-            <div className="p-4 bg-void rounded-xl border border-white/5 space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-white/40">{t('wallet.withdrawAmount')}</span>
-                <span className="text-white font-medium">{amount || '0'} MON</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-white/40">{t('wallet.networkFee')}</span>
-                <span className="text-white">{fee} MON</span>
-              </div>
-              <div className="h-px bg-white/10" />
-              <div className="flex items-center justify-between">
-                <span className="text-white/60 text-sm">{t('wallet.actualReceive')}</span>
-                <span className="text-luxury-green font-bold text-lg">{receiveAmount} MON</span>
-              </div>
-            </div>
-
-            <button
-              onClick={handleWithdraw}
-              disabled={!address || !amount || parseFloat(amount) <= fee || isLoading['withdraw']}
-              className="w-full py-3 rounded-xl bg-luxury-amber text-white font-bold text-lg hover:bg-luxury-amber/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-            >
-              {isLoading['withdraw'] ? <Loader2 className="w-5 h-5 animate-spin" /> : t('wallet.confirmWithdraw')}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // NFT详情弹窗
-  const NFTDetailModal = () => {
-    if (!selectedNFT) return null;
-    
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div className="bg-void-panel rounded-2xl w-full max-w-lg p-6 border border-white/10">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">NFT 详情</h3>
-            <button onClick={() => setShowNFTDetailModal(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-white/60" />
-            </button>
-          </div>
-          
-          <div className="flex gap-6">
-            {/* Image */}
-            <div className="w-48 h-48 rounded-xl overflow-hidden bg-void flex-shrink-0">
-              <img src={selectedNFT.image} alt={selectedNFT.name} className="w-full h-full object-cover" />
-            </div>
-            
-            {/* Info */}
-            <div className="flex-1 space-y-4">
-              <div>
-                <h4 className="text-2xl font-bold text-white mb-1">{selectedNFT.name}</h4>
-                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium capitalize ${getRarityBgColor(selectedNFT.rarity)} text-white`}>
-                  {selectedNFT.rarity}
-                </span>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-void rounded-lg">
-                  <p className="text-xs text-white/40 mb-1">当前估值</p>
-                  <p className="text-lg font-bold text-luxury-gold">{selectedNFT.value} MON</p>
-                  <p className="text-xs text-white/40">≈ ${toUSDT(selectedNFT.value)} USDT</p>
-                </div>
-                <div className="p-3 bg-void rounded-lg">
-                  <p className="text-xs text-white/40 mb-1">Token ID</p>
-                  <p className="text-sm font-mono text-luxury-cyan truncate">{selectedNFT.tokenId}</p>
-                </div>
-              </div>
-              
-              <div>
-                <p className="text-xs text-white/40 mb-2">属性</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {selectedNFT.attributes.map((attr, idx) => (
-                    <div key={idx} className="p-2 bg-void rounded-lg">
-                      <p className="text-[10px] text-white/40 uppercase">{attr.trait}</p>
-                      <p className="text-sm text-white font-medium">{attr.value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="flex gap-2 pt-2">
-                <button className="flex-1 py-2.5 rounded-xl bg-luxury-purple text-white font-medium hover:bg-luxury-purple/90 transition-colors">
-                  转让
-                </button>
-                <button className="flex-1 py-2.5 rounded-xl bg-luxury-gold text-white font-medium hover:bg-luxury-gold/90 transition-colors">
-                  出售
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // 邀请详情弹窗
-  const InviteDetailModal = () => {
-    const totalInvited = inviteRecords.length;
-    const totalReward = inviteRecords.reduce((sum, r) => sum + r.reward, 0);
-    const activeFriends = inviteRecords.filter(r => r.isActive).length;
-    
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div className="bg-void-panel rounded-2xl w-full max-w-2xl p-6 border border-white/10 max-h-[80vh] overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">邀请好友详情</h3>
-            <button onClick={() => setShowInviteDetailModal(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-white/60" />
-            </button>
-          </div>
-          
-          {/* Stats */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            <div className="p-4 bg-void rounded-xl text-center">
-              <p className="text-2xl font-bold text-luxury-cyan">{totalInvited}</p>
-              <p className="text-xs text-white/40">已邀请</p>
-            </div>
-            <div className="p-4 bg-void rounded-xl text-center">
-              <p className="text-2xl font-bold text-luxury-gold">{totalReward}</p>
-              <p className="text-xs text-white/40">获得奖励</p>
-            </div>
-            <div className="p-4 bg-void rounded-xl text-center">
-              <p className="text-2xl font-bold text-luxury-green">{activeFriends}</p>
-              <p className="text-xs text-white/40">活跃好友</p>
-            </div>
-            <div className="p-4 bg-void rounded-xl text-center">
-              <p className="text-2xl font-bold text-luxury-purple">{inviteRecords.reduce((sum, r) => sum + r.totalDeposit, 0).toLocaleString()}</p>
-              <p className="text-xs text-white/40">好友总充值</p>
-            </div>
-          </div>
-          
-          {/* Invite Code */}
-          <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-luxury-purple/20 to-luxury-cyan/20 rounded-xl border border-luxury-purple/30 mb-6">
-            <div className="flex-1">
-              <p className="text-xs text-white/40 mb-1">你的邀请码</p>
-              <p className="text-xl font-mono text-white font-bold">AI2024VIP</p>
-            </div>
-            <button 
-              onClick={copyInviteCode}
-              className="px-4 py-2 bg-luxury-cyan rounded-lg text-white font-medium hover:bg-luxury-cyan/90 transition-colors"
-            >
-              复制
-            </button>
-            <button className="px-4 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 transition-colors">
-              分享
-            </button>
-          </div>
-          
-          {/* Friends List */}
-          <div className="flex-1 overflow-auto">
-            <h4 className="text-sm font-medium text-white mb-3">好友列表</h4>
-            <div className="space-y-2">
-              {inviteRecords.map(friend => (
-                <div key={friend.id} className="flex items-center gap-4 p-3 bg-void rounded-xl">
-                  <img src={friend.avatar} alt={friend.name} className="w-10 h-10 rounded-full bg-void-light" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-white">{friend.name}</p>
-                    <p className="text-xs text-white/40">{formatTime(friend.joinedAt)} 加入</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-luxury-gold">{friend.reward} MON</p>
-                    <p className="text-xs text-white/40">充值 {friend.totalDeposit}</p>
-                  </div>
-                  <div className={`w-2 h-2 rounded-full ${friend.isActive ? 'bg-luxury-green' : 'bg-white/20'}`} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // 交易详情弹窗
-  const TxDetailModal = () => {
-    if (!selectedTx) return null;
-    const config = getTransactionIcon(selectedTx.type);
-    const Icon = config.icon;
-    
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div className="bg-void-panel rounded-2xl w-full max-w-md p-6 border border-white/10">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">交易详情</h3>
-            <button onClick={() => setShowTxDetailModal(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-white/60" />
-            </button>
-          </div>
-          
-          <div className="text-center mb-6">
-            <div className={`w-16 h-16 rounded-2xl ${config.bgColor} flex items-center justify-center mx-auto mb-4`}>
-              <Icon className="w-8 h-8 text-white" />
-            </div>
-            <p className={`text-3xl font-bold ${selectedTx.amount >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
-              {selectedTx.amount >= 0 ? '+' : ''}{selectedTx.amount} MON
-            </p>
-            <p className="text-white/40 mt-1">≈ ${toUSDT(Math.abs(selectedTx.amount))} USDT</p>
-          </div>
-          
-          <div className="space-y-3">
-            <div className="flex items-center justify-between py-2 border-b border-white/5">
-              <span className="text-white/40">交易类型</span>
-              <span className="text-white">{selectedTx.description}</span>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b border-white/5">
-              <span className="text-white/40">状态</span>
-              <span className={`flex items-center gap-1 ${selectedTx.status === 'completed' ? 'text-luxury-green' : selectedTx.status === 'pending' ? 'text-luxury-gold' : 'text-luxury-rose'}`}>
-                {selectedTx.status === 'completed' ? <CheckCircle className="w-4 h-4" /> : selectedTx.status === 'pending' ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertCircle className="w-4 h-4" />}
-                {selectedTx.status === 'completed' ? '已完成' : selectedTx.status === 'pending' ? '处理中' : '失败'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b border-white/5">
-              <span className="text-white/40">时间</span>
-              <span className="text-white">{formatTime(selectedTx.timestamp)}</span>
-            </div>
-            {selectedTx.txHash && (
-              <div className="flex items-center justify-between py-2 border-b border-white/5">
-                <span className="text-white/40">交易哈希</span>
-                <a href="#" className="text-luxury-cyan flex items-center gap-1 hover:underline">
-                  {selectedTx.txHash} <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
+  const handleWithdraw = () => {
+    const value = parseFloat(amount);
+    if (value > 0) {
+      withdraw(value);
+      setAmount('');
+    }
   };
 
   if (!wallet.connected) {
     return (
-      <div className="min-h-screen bg-void flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] to-[#050508] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-luxury-gold/20 to-luxury-purple/20 border border-luxury-gold/30 flex items-center justify-center mx-auto mb-6">
-            <Wallet className="w-10 h-10 text-luxury-gold" />
+          <div className="w-20 h-20 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center mx-auto mb-6">
+            <Wallet className="w-10 h-10 text-purple-400" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">{t('wallet.connectFirst')}</h2>
-          <p className="text-white/40 mb-8">{t('wallet.connectDesc') || 'Please connect your wallet to continue'}</p>
-          <ConnectButton />
+          <h2 className="text-2xl font-bold text-white mb-2">连接钱包</h2>
+          <p className="text-white/40 mb-8">请先连接钱包以查看资产</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-void pt-24 pb-24">
-      <div className="max-w-screen-xl mx-auto px-4">
-        {/* Toast Notification */}
-        {toast && (
-          <div className={`fixed top-24 right-4 z-[60] px-6 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-slide-in ${
-            toast.type === 'success' ? 'bg-luxury-green/90' : toast.type === 'error' ? 'bg-luxury-rose/90' : 'bg-luxury-cyan/90'
-          }`}>
-            {toast.type === 'success' ? <CheckCircle className="w-5 h-5 text-white" /> : <AlertCircle className="w-5 h-5 text-white" />}
-            <span className="text-white font-medium">{toast.message}</span>
+    <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] to-[#050508] pt-20 pb-24">
+      <div className="max-w-4xl mx-auto px-4">
+        {/* 总资产卡片 */}
+        <div className="bg-gradient-to-br from-purple-500/20 via-purple-600/10 to-transparent border border-purple-500/30 rounded-2xl p-8 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-white/60">总资产估值</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-white/40">$MON</span>
+              <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-full">+5.2%</span>
+            </div>
+          </div>
+          <div className="text-4xl font-bold text-white mb-2">
+            ${totalValue.toLocaleString()}
+          </div>
+          <div className="flex items-center gap-4 text-sm text-white/40">
+            <span>钱包: ${wallet.balance.toLocaleString()}</span>
+            <span>·</span>
+            <span>Agent持仓: ${totalAgentBalance.toLocaleString()}</span>
+          </div>
+        </div>
+
+        {/* 充值提现 */}
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 mb-6">
+          <div className="flex items-center gap-4 mb-6">
+            <input
+              type="number"
+              placeholder="输入金额"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/30"
+            />
+            <button
+              onClick={handleDeposit}
+              disabled={!amount || parseFloat(amount) <= 0}
+              className="flex items-center gap-2 px-6 py-3 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-xl font-medium transition-colors disabled:opacity-50"
+            >
+              <ArrowDownLeft className="w-5 h-5" />
+              充值
+            </button>
+            <button
+              onClick={handleWithdraw}
+              disabled={!amount || parseFloat(amount) <= 0 || parseFloat(amount) > wallet.balance}
+              className="flex items-center gap-2 px-6 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl font-medium transition-colors disabled:opacity-50"
+            >
+              <ArrowUpRight className="w-5 h-5" />
+              提现
+            </button>
+          </div>
+
+          {/* 钱包地址 */}
+          <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-sm text-white/40">钱包地址</p>
+                <p className="text-white font-mono">{wallet.address.slice(0, 8)}...{wallet.address.slice(-6)}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleCopyAddress}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              {copied ? <CheckCircle className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5 text-white/40" />}
+            </button>
+          </div>
+        </div>
+
+        {/* 统计网格 */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <StatBox
+            icon={stats.totalProfit >= 0 ? TrendingUp : TrendingDown}
+            label="总盈亏"
+            value={`${stats.totalProfit >= 0 ? '+' : ''}$${stats.totalProfit.toLocaleString()}`}
+            color={stats.totalProfit >= 0 ? 'green' : 'red'}
+          />
+          <StatBox
+            icon={Target}
+            label="总Agents"
+            value={myAgents.length}
+            color="purple"
+          />
+          <StatBox
+            icon={PieChart}
+            label="多空比"
+            value={`${stats.longCount}:${stats.shortCount}`}
+            color="amber"
+          />
+          <StatBox
+            icon={Zap}
+            label="平均杠杆"
+            value={`${stats.avgLeverage}x`}
+            color="cyan"
+          />
+        </div>
+
+        {/* 标签页 */}
+        <div className="flex border-b border-white/10 mb-6">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`flex-1 py-4 text-sm font-medium transition-colors ${
+              activeTab === 'overview' ? 'text-white border-b-2 border-purple-500' : 'text-white/40 hover:text-white'
+            }`}
+          >
+            资产分布
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`flex-1 py-4 text-sm font-medium transition-colors ${
+              activeTab === 'history' ? 'text-white border-b-2 border-purple-500' : 'text-white/40 hover:text-white'
+            }`}
+          >
+            交易记录
+          </button>
+        </div>
+
+        {/* 内容 */}
+        {activeTab === 'overview' ? (
+          <div className="space-y-4">
+            {/* 资产分布 */}
+            <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">资产分布</h3>
+              <div className="space-y-3">
+                <AssetBar
+                  label="钱包余额"
+                  value={wallet.balance}
+                  total={totalValue}
+                  color="purple"
+                />
+                <AssetBar
+                  label="Agent持仓"
+                  value={totalAgentBalance}
+                  total={totalValue}
+                  color="amber"
+                />
+              </div>
+            </div>
+
+            {/* 多空分布 */}
+            <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">持仓方向分布</h3>
+              <div className="h-4 bg-white/5 rounded-full overflow-hidden flex">
+                <div
+                  className="h-full bg-gradient-to-r from-green-600 to-green-400 transition-all"
+                  style={{ width: `${myAgents.length ? (stats.longCount / myAgents.length) * 100 : 50}%` }}
+                />
+                <div
+                  className="h-full bg-gradient-to-r from-red-400 to-red-600 transition-all"
+                  style={{ width: `${myAgents.length ? (stats.shortCount / myAgents.length) * 100 : 50}%` }}
+                />
+              </div>
+              <div className="flex justify-between mt-3">
+                <span className="flex items-center gap-2 text-sm text-green-400">
+                  <span className="w-3 h-3 rounded-full bg-green-500" />
+                  做多 {stats.longCount}
+                </span>
+                <span className="flex items-center gap-2 text-sm text-red-400">
+                  <span className="w-3 h-3 rounded-full bg-red-500" />
+                  做空 {stats.shortCount}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl overflow-hidden">
+            <div className="p-4 border-b border-white/10">
+              <h3 className="text-lg font-semibold text-white">最近交易</h3>
+            </div>
+            <div className="divide-y divide-white/5">
+              {transactions.map((tx) => (
+                <div key={tx.id} className="flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      tx.type === 'deposit' || tx.type === 'profit'
+                        ? 'bg-green-500/10 text-green-400'
+                        : 'bg-red-500/10 text-red-400'
+                    }`}>
+                      {tx.type === 'deposit' ? <ArrowDownLeft className="w-5 h-5" /> :
+                       tx.type === 'withdraw' ? <ArrowUpRight className="w-5 h-5" /> :
+                       tx.type === 'profit' ? <TrendingUp className="w-5 h-5" /> :
+                       <Wallet className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <p className="text-white font-medium">
+                        {tx.type === 'deposit' ? '充值' :
+                         tx.type === 'withdraw' ? '提现' :
+                         tx.type === 'mint' ? '铸造 Agent' :
+                         tx.type === 'allocate' ? '资金分配' :
+                         '战斗收益'}
+                      </p>
+                      <p className="text-sm text-white/40">{tx.time}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-mono font-medium ${
+                      tx.amount > 0 ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {tx.amount > 0 ? '+' : ''}{tx.amount} $MON
+                    </p>
+                    <p className="text-xs text-white/40 flex items-center gap-1 justify-end">
+                      {tx.status === 'completed' ? (
+                        <><CheckCircle className="w-3 h-3" /> 已完成</>
+                      ) : (
+                        <><Clock className="w-3 h-3" /> 处理中</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
-
-
-
-        {/* 资产概览卡片 */}
-        <div className="card-luxury rounded-2xl overflow-hidden mb-6 border-luxury-gold/20">
-              <div className="px-8 py-6 bg-gradient-to-br from-luxury-gold/5 to-transparent">
-                {/* 总资产和操作按钮 */}
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <div className="flex items-center gap-3 mb-1">
-                      <p className="text-sm text-white/40 uppercase tracking-wider">{t('wallet.totalAssets')}</p>
-                      <div className={`flex items-center gap-1 text-xs ${MON_PRICE_CHANGE_24H >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
-                        {MON_PRICE_CHANGE_24H >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                        {MON_PRICE_CHANGE_24H >= 0 ? '+' : ''}{MON_PRICE_CHANGE_24H}%
-                      </div>
-                    </div>
-                    <div className="flex items-baseline gap-3">
-                      <p className="text-5xl font-bold text-gradient-gold font-mono">{totalAssets.toLocaleString()}</p>
-                      <span className="text-xl text-white/60">$MON</span>
-                    </div>
-                    <p className="text-lg text-white/40 mt-1">≈ ${toUSDT(totalAssets)} USDT</p>
-                  </div>
-
-                  {/* 存款/兑换/提现按钮 */}
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setShowDepositModal(true)}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-luxury-green/10 border border-luxury-green/20 text-luxury-green hover:bg-luxury-green/20 transition-colors"
-                    >
-                      <ArrowDownRight className="w-5 h-5" />
-                      <span className="font-medium">{t('wallet.deposit')}</span>
-                    </button>
-                    <button
-                      onClick={() => setShowSwapModal(true)}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-luxury-gold/10 border border-luxury-gold/20 text-luxury-gold hover:bg-luxury-gold/20 transition-colors"
-                    >
-                      <RefreshCw className="w-5 h-5" />
-                      <span className="font-medium">{t('wallet.swap')}</span>
-                    </button>
-                    <button
-                      onClick={() => setShowWithdrawModal(true)}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-luxury-amber/10 border border-luxury-amber/20 text-luxury-amber hover:bg-luxury-amber/20 transition-colors"
-                    >
-                      <ArrowUpRight className="w-5 h-5" />
-                      <span className="font-medium">{t('wallet.withdraw')}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 可用余额、锁定资产、流动性挖矿 */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-void-light/50 rounded-xl p-4 border border-white/5">
-                    <div className="flex items-center gap-2 text-white/40 mb-2">
-                      <Wallet className="w-4 h-4" />
-                      <span className="text-xs uppercase tracking-wider">{t('wallet.available')}</span>
-                    </div>
-                    <p className="text-2xl font-bold text-luxury-green font-mono">{wallet.balance.toLocaleString()}</p>
-                    <p className="text-xs text-white/40 mt-1">≈ ${toUSDT(wallet.balance)} USDT</p>
-                  </div>
-
-                  <div className="bg-void-light/50 rounded-xl p-4 border border-white/5">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2 text-white/40">
-                        <TrendingUp className="w-4 h-4" />
-                        <span className="text-xs uppercase tracking-wider">{t('wallet.locked')}</span>
-                      </div>
-                    </div>
-                    <p className="text-2xl font-bold text-luxury-amber font-mono">{agentsTotalBalance.toLocaleString()}</p>
-                    <p className="text-xs text-white/40 mt-1">≈ ${toUSDT(agentsTotalBalance)} USDT</p>
-                    {agentsTotalBalance > 0 && (
-                      <button
-                        onClick={handleWithdrawAllFromAgents}
-                        className="w-full mt-3 px-3 py-2 rounded-lg bg-luxury-amber/20 text-luxury-amber hover:bg-luxury-amber/30 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                      >
-                        <ArrowDownRight className="w-4 h-4" />
-                        {t('wallet.withdrawAll') || '一键归集'}
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="bg-void-light/50 rounded-xl p-4 border border-white/5">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2 text-white/40">
-                        <Pickaxe className="w-4 h-4 text-luxury-purple" />
-                        <span className="text-xs uppercase tracking-wider">{t('wallet.stakedLiquidity')}</span>
-                      </div>
-                      <button
-                        onClick={() => navigate('/mining')}
-                        className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <p className="text-2xl font-bold text-luxury-purple font-mono">{totalStaked.toLocaleString()}</p>
-                    <p className="text-xs text-luxury-gold mt-1">+{totalPendingRewards.toFixed(2)} {t('wallet.pendingRewards')}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* NFT 展示模块 */}
-            <div className="card-luxury rounded-2xl p-6 mb-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <Image className="w-5 h-5 text-luxury-purple" />
-                  {t('wallet.myNFT')}
-                  <span className="text-xs px-2 py-0.5 bg-luxury-purple/20 rounded-full text-luxury-purple">{nfts.length}</span>
-                </h3>
-                <button className="text-sm text-luxury-cyan hover:text-luxury-cyan-light flex items-center gap-1">
-                  {t('wallet.viewAll')} <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-4 gap-3">
-                {nfts.map((nft) => (
-                  <div
-                    key={nft.id}
-                    onClick={() => { setSelectedNFT(nft); setShowNFTDetailModal(true); }}
-                    className="group relative bg-void-light rounded-xl p-3 border border-white/10 hover:border-white/20 transition-all cursor-pointer overflow-hidden"
-                  >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${getRarityColor(nft.rarity)} opacity-0 group-hover:opacity-30 rounded-xl transition-opacity`} />
-                    <div className="relative w-full aspect-square mb-2 rounded-lg overflow-hidden bg-void">
-                      <img
-                        src={nft.image}
-                        alt={nft.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <p className="text-xs font-medium text-white text-center mb-0.5 truncate">{nft.name}</p>
-                    <p className="text-[10px] text-white/40 text-center capitalize">{nft.rarity}</p>
-                    <p className="text-xs font-bold text-luxury-gold font-mono text-center mt-1">{nft.value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 邀请好友模块 */}
-            <div className="card-luxury rounded-2xl p-6 mb-6 bg-gradient-to-br from-luxury-purple/10 to-luxury-cyan/10 border-luxury-purple/30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-luxury-purple flex items-center justify-center">
-                    <Gift className="w-7 h-7 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <Users className="w-5 h-5 text-luxury-cyan" />
-                      {t('wallet.inviteFriends')}
-                    </h3>
-                    <p className="text-sm text-white/60" dangerouslySetInnerHTML={{ __html: t('wallet.inviteDesc').replace('100 $MON', '<span class="text-luxury-gold font-bold">100 $MON</span>') }} />
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowInviteDetailModal(true)}
-                  className="px-6 py-3 rounded-xl bg-luxury-cyan text-white font-semibold hover:bg-luxury-cyan/90 transition-colors"
-                >
-                  {t('wallet.viewDetails')}
-                </button>
-              </div>
-
-              <div className="mt-6 pt-6 border-t border-white/10">
-                {/* 邀请链接和邀请码 */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-void-light rounded-xl px-4 py-3 border border-white/10">
-                    <p className="text-xs text-white/40 mb-1">{t('wallet.inviteLink')}</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-mono text-white truncate flex-1">{inviteLink}</p>
-                      <button
-                        onClick={copyInviteLink}
-                        className="p-2 rounded-lg bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={shareInviteLink}
-                        className="p-2 rounded-lg bg-luxury-cyan/20 text-luxury-cyan hover:bg-luxury-cyan/30 transition-colors"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="bg-void-light rounded-xl px-4 py-3 border border-white/10">
-                    <p className="text-xs text-white/40 mb-1">{t('wallet.inviteCode')}</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-lg font-mono text-white">{inviteCode}</p>
-                      <button
-                        onClick={copyInviteCode}
-                        className="p-2 rounded-lg bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-                        title={t('common.copy')}
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-3 bg-void-light/50 rounded-xl">
-                    <p className="text-2xl font-bold text-luxury-cyan">{inviteRecords.length}</p>
-                    <p className="text-xs text-white/40">{t('wallet.invited')}</p>
-                  </div>
-                  <div className="text-center p-3 bg-void-light/50 rounded-xl">
-                    <p className="text-2xl font-bold text-luxury-gold">{inviteRecords.reduce((sum, r) => sum + r.reward, 0)}</p>
-                    <p className="text-xs text-white/40">{t('wallet.earned')}</p>
-                  </div>
-                  <div className="text-center p-3 bg-void-light/50 rounded-xl">
-                    <p className="text-2xl font-bold text-luxury-green">{inviteRecords.filter(r => r.isActive).length}</p>
-                    <p className="text-xs text-white/40">{t('wallet.activeFriends')}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* 交易记录 */}
-            <div className="card-luxury rounded-2xl overflow-hidden">
-              <div className="px-6 py-4 border-b border-white/5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-luxury-purple" />
-                    {t('wallet.transactions')}
-                  </h3>
-                  <button className="text-sm text-luxury-cyan hover:text-luxury-cyan-light flex items-center gap-1">
-                    <Download className="w-4 h-4" />
-                    {t('wallet.export')}
-                  </button>
-                </div>
-
-                {/* Filter & Search */}
-                <div className="flex gap-3">
-                  <div className="flex gap-2">
-                    {(['all', 'deposit', 'withdraw', 'swap', 'battle'] as const).map(type => (
-                      <button
-                        key={type}
-                        onClick={() => setTxFilter(type)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                          txFilter === type
-                            ? 'bg-luxury-cyan text-white'
-                            : 'bg-void-light text-white/60 hover:text-white'
-                        }`}
-                      >
-                        {type === 'all' ? t('wallet.all') : type === 'deposit' ? t('wallet.deposit') : type === 'withdraw' ? t('wallet.withdraw') : type === 'swap' ? t('wallet.swap') : t('arena.battles')}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                    <input
-                      type="text"
-                      value={txSearchQuery}
-                      onChange={(e) => setTxSearchQuery(e.target.value)}
-                      placeholder={t('wallet.search')}
-                      className="w-full bg-void-light border border-white/10 rounded-lg pl-9 pr-3 py-1.5 text-sm text-white placeholder:text-white/30 focus:border-luxury-cyan focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="divide-y divide-white/5">
-                {filteredTransactions.slice(0, 5).map(tx => {
-                  const config = getTransactionIcon(tx.type);
-                  const Icon = config.icon;
-
-                  return (
-                    <div
-                      key={tx.id}
-                      onClick={() => { setSelectedTx(tx); setShowTxDetailModal(true); }}
-                      className="p-4 flex items-center justify-between hover:bg-void-light/30 transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl ${config.bgColor} flex items-center justify-center`}>
-                          <Icon className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-white">{tx.description}</p>
-                          <div className="flex items-center gap-2">
-                            <p className="text-xs text-white/40">{formatTime(tx.timestamp)}</p>
-                            {tx.status === 'pending' && <span className="text-[10px] px-1.5 py-0.5 bg-luxury-gold/20 text-luxury-gold rounded">{t('wallet.pending')}</span>}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className={`font-bold font-mono block ${tx.amount >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
-                          {tx.amount >= 0 ? '+' : ''}{tx.amount}
-                        </span>
-                        <span className="text-xs text-white/40">≈ ${toUSDT(Math.abs(tx.amount))}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {isLoadingTransactions ? (
-                <div className="p-12 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-void-light/50 border border-white/5 flex items-center justify-center mx-auto mb-4">
-                    <Loader2 className="w-8 h-8 text-white/40 animate-spin" />
-                  </div>
-                  <p className="text-white/40">{t('common.loading')}...</p>
-                </div>
-              ) : filteredTransactions.length === 0 ? (
-                <div className="p-12 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-void-light/50 border border-white/5 flex items-center justify-center mx-auto mb-4">
-                    <Clock className="w-8 h-8 text-white/20" />
-                  </div>
-                  <p className="text-white/40">{t('wallet.noTransactions')}</p>
-                </div>
-              ) : null}
-
-              {filteredTransactions.length > 5 && (
-                <div className="p-4 text-center border-t border-white/5">
-                  <button className="text-sm text-luxury-cyan hover:text-luxury-cyan-light">
-                    {t('common.loadMore')}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        
-        {/* Modals */}
-        {showDepositModal && <DepositModal />}
-        {showSwapModal && <SwapModal />}
-        {showWithdrawModal && <WithdrawModal />}
-        {showNFTDetailModal && <NFTDetailModal />}
-        {showInviteDetailModal && <InviteDetailModal />}
-        {showTxDetailModal && <TxDetailModal />}
       </div>
+    </div>
+  );
+};
+
+// 统计盒子
+const StatBox = ({ icon: Icon, label, value, color }: { icon: any, label: string, value: string | number, color: string }) => {
+  const colors: Record<string, string> = {
+    green: 'text-green-400 bg-green-500/10',
+    red: 'text-red-400 bg-red-500/10',
+    purple: 'text-purple-400 bg-purple-500/10',
+    amber: 'text-amber-400 bg-amber-500/10',
+    cyan: 'text-cyan-400 bg-cyan-500/10',
+  };
+
+  return (
+    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+      <div className={`w-10 h-10 rounded-lg ${colors[color]} flex items-center justify-center mb-3`}>
+        <Icon className="w-5 h-5" />
+      </div>
+      <p className="text-2xl font-bold text-white">{value}</p>
+      <p className="text-sm text-white/40 mt-1">{label}</p>
+    </div>
+  );
+};
+
+// 资产条
+const AssetBar = ({ label, value, total, color }: { label: string, value: number, total: number, color: string }) => {
+  const percentage = total > 0 ? (value / total) * 100 : 0;
+  const colors: Record<string, string> = {
+    purple: 'bg-purple-500',
+    amber: 'bg-amber-500',
+    green: 'bg-green-500',
+    red: 'bg-red-500',
+    cyan: 'bg-cyan-500',
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-white/60">{label}</span>
+        <span className="text-white font-mono">${value.toLocaleString()} ({percentage.toFixed(1)}%)</span>
+      </div>
+      <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+        <div className={`h-full ${colors[color]} rounded-full transition-all`} style={{ width: `${percentage}%` }} />
+      </div>
+    </div>
   );
 };
 

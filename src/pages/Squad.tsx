@@ -1,30 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/gameStore';
-
-
-import MintingModal from '../components/MintingModal';
-import ConnectButton from '../components/ConnectButton';
-import AgentDetailModal from '../components/AgentDetailModal';
-import QuickRechargeModal from '../components/QuickRechargeModal';
 import { Agent } from '../types';
 import {
-  Users,
-  Plus,
-  Filter,
-  Sparkles,
-  TrendingUp,
-  Skull,
-  Swords,
-  Wallet,
-  Zap,
-  CheckSquare,
-  Square,
-  BatteryCharging,
-  Rocket,
-  Lock,
-  Target,
-  LogOut
+  Users, Plus, Filter, TrendingUp, TrendingDown, Wallet,
+  Swords, CheckSquare, Square, ArrowUpRight, ArrowDownRight,
+  Target, Zap, BarChart3, ChevronRight, Settings2, Trash2,
+  ArrowRightLeft, LogOut
 } from 'lucide-react';
 
 const Squad: React.FC = () => {
@@ -35,913 +17,629 @@ const Squad: React.FC = () => {
     mintAgent,
     mintCost,
     allocateFunds,
-    joinArena
+    withdrawFromAgent,
+    joinArena,
+    leaveArena,
+    updateAgentLeverage,
+    removeAgent,
+    getTotalStats
   } = useGameStore();
 
-  // 调试日志
-  useEffect(() => {
-    console.log('[Squad] myAgents updated:', myAgents);
-    console.log('[Squad] myAgents count:', myAgents.length);
-    if (myAgents.length > 0) {
-      console.log('[Squad] First agent:', myAgents[0]);
-      console.log('[Squad] First agent image:', myAgents[0].image);
-    }
-  }, [myAgents]);
-  
   const [mintCount, setMintCount] = useState(1);
-  const [filter, setFilter] = useState<'all' | 'idle' | 'in_arena' | 'fighting' | 'eliminated'>('all');
+  const [filter, setFilter] = useState<'all' | 'idle' | 'in_arena' | 'fighting' | 'liquidated'>('all');
   const [isMinting, setIsMinting] = useState(false);
   const [showMintModal, setShowMintModal] = useState(false);
   const [mintedAgents, setMintedAgents] = useState<Agent[]>([]);
-  
   const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set());
-  const [batchAmount, setBatchAmount] = useState('');
-  const [showBatchPanel, setShowBatchPanel] = useState(false);
-  const [sortBy, setSortBy] = useState<'balance' | 'profit' | 'winRate' | 'status'>('balance');
-  
+  const [sortBy, setSortBy] = useState<'balance' | 'profit' | 'leverage' | 'status'>('balance');
+  const [showActionModal, setShowActionModal] = useState<string | null>(null);
+  const [actionAmount, setActionAmount] = useState('');
+
+  const stats = getTotalStats();
+
   const handleMint = async () => {
     if (!wallet.connected || wallet.balance < mintCost * mintCount) return;
-
     setShowMintModal(true);
     setIsMinting(true);
     setMintedAgents([]);
-
-    // 播放铸造动画
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
+    await new Promise(resolve => setTimeout(resolve, 1500));
     const newAgents: Agent[] = [];
     for (let i = 0; i < mintCount; i++) {
       const agent = await mintAgent();
-      if (agent) {
-        newAgents.push(agent);
-      }
+      if (agent) newAgents.push(agent);
     }
-
     setMintedAgents(newAgents);
     setIsMinting(false);
   };
-  
+
   const toggleAgentSelection = (agentId: string) => {
     setSelectedAgents(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(agentId)) {
-        newSet.delete(agentId);
-      } else {
-        newSet.add(agentId);
-      }
+      if (newSet.has(agentId)) newSet.delete(agentId);
+      else newSet.add(agentId);
       return newSet;
     });
   };
-  
-  const toggleSelectAll = () => {
-    const idleAgentIds = idleAgents.map(a => a.id);
-    if (selectedAgents.size === idleAgentIds.length) {
-      setSelectedAgents(new Set());
-    } else {
-      setSelectedAgents(new Set(idleAgentIds));
-    }
-  };
-  
-  const handleBatchRecharge = () => {
-    const totalAmount = parseFloat(batchAmount);
-    if (!totalAmount || totalAmount <= 0) return;
 
-    if (totalAmount > wallet.balance) {
-      alert(`${t('wallet.insufficientBalance')}: ${totalAmount}, ${t('wallet.currentBalance')}: ${wallet.balance}`);
-      return;
-    }
-
-    const amountPerAgent = Math.floor(totalAmount / selectedAgents.size);
-    const remainder = totalAmount - (amountPerAgent * selectedAgents.size);
-
-    const agentIds = Array.from(selectedAgents);
-    agentIds.forEach((agentId, index) => {
-      const amount = index === 0 ? amountPerAgent + remainder : amountPerAgent;
-      if (amount > 0) {
-        allocateFunds(agentId, amount);
-      }
-    });
-
-    setBatchAmount('');
+  const handleBatchDeposit = () => {
+    const amount = parseFloat(actionAmount);
+    if (!amount || amount <= 0) return;
+    const perAgent = Math.floor(amount / selectedAgents.size);
+    selectedAgents.forEach(agentId => allocateFunds(agentId, perAgent));
     setSelectedAgents(new Set());
-    alert(`${t('wallet.rechargeSuccess')} ${totalAmount} ${t('squad.to')} ${selectedAgents.size} ${t('squad.agents')}, ${t('squad.each')} ~${amountPerAgent}`);
+    setActionAmount('');
   };
-  
-  const handleBatchJoinArena = () => {
-    const eligibleAgents = myAgents.filter(
-      a => a.status === 'idle' && a.balance > 0 && !selectedAgents.has(a.id)
-    );
 
-    const agentsToJoin = [...eligibleAgents, ...myAgents.filter(a => selectedAgents.has(a.id))]
-      .filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
-
-    if (agentsToJoin.length === 0) {
-      alert(t('squad.noEligibleAgents'));
-      return;
-    }
-
-    agentsToJoin.forEach(agent => {
-      if (agent.status === 'idle' && agent.balance > 0) {
-        joinArena(agent.id);
-      }
-    });
-
+  const handleBatchJoin = () => {
+    selectedAgents.forEach(agentId => joinArena(agentId));
     setSelectedAgents(new Set());
-    alert(`${t('squad.joinSuccess')} ${agentsToJoin.length} ${t('squad.agents')} ${t('arena.title')}`);
   };
 
-  const handleRechargeAll = () => {
-    if (idleAgents.length === 0) {
-      alert(t('squad.noIdleAgents'));
-      return;
-    }
-
-    const totalAmount = parseFloat(batchAmount);
-    if (!totalAmount || totalAmount <= 0) {
-      alert(t('squad.invalidAmount'));
-      return;
-    }
-
-    if (totalAmount > wallet.balance) {
-      alert(`${t('wallet.insufficientBalance')}: ${totalAmount}, ${t('wallet.currentBalance')}: ${wallet.balance}`);
-      return;
-    }
-
-    const amountPerAgent = Math.floor(totalAmount / idleAgents.length);
-    const remainder = totalAmount - (amountPerAgent * idleAgents.length);
-
-    idleAgents.forEach((agent, index) => {
-      const amount = index === 0 ? amountPerAgent + remainder : amountPerAgent;
-      if (amount > 0) {
-        allocateFunds(agent.id, amount);
-      }
-    });
-
-    setBatchAmount('');
-    alert(`${t('wallet.rechargeSuccess')} ${totalAmount} ${t('squad.to')} ${idleAgents.length} ${t('squad.agents')}, ${t('squad.each')} ~${amountPerAgent}`);
-  };
-
-  const handleJoinAllArena = () => {
-    const eligibleAgents = myAgents.filter(
-      a => a.status === 'idle' && a.balance > 0
-    );
-
-    if (eligibleAgents.length === 0) {
-      alert(t('squad.noEligibleAgents'));
-      return;
-    }
-
-    eligibleAgents.forEach(agent => {
-      joinArena(agent.id);
-    });
-
-    alert(`${t('squad.joinSuccess')} ${eligibleAgents.length} ${t('squad.agents')} ${t('arena.title')}`);
-  };
-  
   const filteredAgents = myAgents
-    .filter(agent => {
-      if (filter === 'all') return true;
-      return agent.status === filter;
-    })
+    .filter(agent => filter === 'all' ? true : agent.status === filter)
     .sort((a, b) => {
       switch (sortBy) {
-        case 'balance':
-          return b.balance - a.balance;
-        case 'profit':
-          return b.netProfit - a.netProfit;
-        case 'winRate': {
-          const winRateA = a.totalBattles > 0 ? a.wins / a.totalBattles : 0;
-          const winRateB = b.totalBattles > 0 ? b.wins / b.totalBattles : 0;
-          return winRateB - winRateA;
-        }
-        case 'status': {
-          const statusOrder = { idle: 0, in_arena: 1, fighting: 2, eliminated: 3 };
-          return statusOrder[a.status] - statusOrder[b.status];
-        }
-        default:
-          return 0;
+        case 'balance': return b.balance - a.balance;
+        case 'profit': return b.netProfit - a.netProfit;
+        case 'leverage': return b.leverage - a.leverage;
+        case 'status':
+          const order = { idle: 0, in_arena: 1, fighting: 2, liquidated: 3 };
+          return order[a.status] - order[b.status];
+        default: return 0;
       }
     });
-  
-  const idleAgents = myAgents.filter(a => a.status === 'idle');
-  const canJoinArena = idleAgents.filter(a => a.balance > 0);
-  
-  const totalBalance = myAgents.reduce((sum, a) => sum + a.balance, 0);
-  const totalProfit = myAgents.reduce((sum, a) => sum + a.netProfit, 0);
-  const agentsTotalBalance = totalBalance;
-  const profitPercentage = totalBalance > 0 ? (totalProfit / totalBalance) * 100 : 0;
-  const avgWinRate = myAgents.length > 0
-    ? Math.round(myAgents.reduce((sum, a) => sum + (a.wins + a.losses > 0 ? a.wins / (a.wins + a.losses) : 0), 0) / myAgents.length * 100)
-    : 0;
 
-  const getFilterConfig = (key: string) => {
-    switch (key) {
-      case 'all': return { label: t('squad.all'), color: 'bg-luxury-purple', icon: Users };
-      case 'idle': return { label: t('squad.idle'), color: 'bg-luxury-cyan', icon: Wallet };
-      case 'in_arena': return { label: t('arena.waiting'), color: 'bg-luxury-gold', icon: Swords };
-      case 'fighting': return { label: t('arena.fighting'), color: 'bg-luxury-rose', icon: Skull };
-      case 'eliminated': return { label: '已淘汰', color: 'bg-gray-500', icon: Skull };
-      default: return { label: t('squad.all'), color: 'bg-luxury-purple', icon: Users };
-    }
-  };
+  const idleAgents = myAgents.filter(a => a.status === 'idle');
+  const inArenaAgents = myAgents.filter(a => a.status === 'in_arena');
+  const longAgents = myAgents.filter(a => a.position === 'long');
+  const shortAgents = myAgents.filter(a => a.position === 'short');
 
   if (!wallet.connected) {
     return (
-      <div className="min-h-screen bg-void flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] to-[#050508] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-luxury-purple/20 to-luxury-cyan/20 border border-luxury-purple/30 flex items-center justify-center mx-auto mb-6">
-            <Wallet className="w-10 h-10 text-luxury-purple" />
+          <div className="w-20 h-20 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center mx-auto mb-6">
+            <Wallet className="w-10 h-10 text-purple-400" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">{t('wallet.connectFirst')}</h2>
-          <p className="text-white/40 mb-8">{t('wallet.connectDesc') || 'Please connect your wallet to continue'}</p>
-          <ConnectButton />
+          <h2 className="text-2xl font-bold text-white mb-2">连接钱包</h2>
+          <p className="text-white/40 mb-8">请先连接钱包以管理您的交易小队</p>
+          <button className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-xl font-medium transition-all">
+            连接钱包
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-void pt-24 pb-24">
-      <div className="max-w-screen-xl mx-auto px-4">
-        {/* 统计概览 - 优化视觉层次 */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
-          <div className="card-luxury rounded-2xl p-5 relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-luxury-purple/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-luxury-purple/10 border border-luxury-purple/20 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-luxury-purple" />
-                </div>
-                <span className="text-xs text-white/40 uppercase tracking-wider">{t('squad.agents')}</span>
-              </div>
-              <p className="text-3xl font-bold text-white font-display">{myAgents.length}</p>
+    <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] to-[#050508] pt-20 pb-24">
+      <div className="max-w-7xl mx-auto px-4">
+        {/* 统计概览 */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <StatCard
+            icon={Users}
+            label="总Agents"
+            value={myAgents.length}
+            color="purple"
+          />
+          <StatCard
+            icon={Wallet}
+            label="总余额"
+            value={`$${stats.totalBalance.toLocaleString()}`}
+            color="amber"
+          />
+          <StatCard
+            icon={stats.totalProfit >= 0 ? TrendingUp : TrendingDown}
+            label="总盈亏"
+            value={`${stats.totalProfit >= 0 ? '+' : ''}$${stats.totalProfit.toLocaleString()}`}
+            color={stats.totalProfit >= 0 ? 'green' : 'red'}
+          />
+          <StatCard
+            icon={Zap}
+            label="平均杠杆"
+            value={`${stats.avgLeverage}x`}
+            color="cyan"
+          />
+        </div>
+
+        {/* 多空分布 */}
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">持仓分布</h3>
+            <div className="flex items-center gap-4 text-sm">
+              <span className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-green-500" />
+                做多 {longAgents.length}
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-red-500" />
+                做空 {shortAgents.length}
+              </span>
             </div>
           </div>
-
-          <div className="card-luxury rounded-2xl p-5 relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-luxury-gold/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-luxury-gold/10 border border-luxury-gold/20 flex items-center justify-center">
-                  <Lock className="w-5 h-5 text-luxury-gold" />
-                </div>
-                <span className="text-xs text-white/40 uppercase tracking-wider">{t('wallet.locked')}</span>
-              </div>
-              <p className="text-3xl font-bold text-luxury-gold font-mono">{agentsTotalBalance.toLocaleString()}</p>
-            </div>
+          <div className="h-4 bg-white/5 rounded-full overflow-hidden flex">
+            <div
+              className="h-full bg-gradient-to-r from-green-600 to-green-400 transition-all"
+              style={{ width: `${myAgents.length ? (longAgents.length / myAgents.length) * 100 : 50}%` }}
+            />
+            <div
+              className="h-full bg-gradient-to-r from-red-400 to-red-600 transition-all"
+              style={{ width: `${myAgents.length ? (shortAgents.length / myAgents.length) * 100 : 50}%` }}
+            />
           </div>
-
-          <div className="card-luxury rounded-2xl p-5 relative overflow-hidden group">
-            <div className={`absolute inset-0 bg-gradient-to-br ${totalProfit >= 0 ? 'from-luxury-green/5' : 'from-luxury-rose/5'} to-transparent opacity-0 group-hover:opacity-100 transition-opacity`} />
-            <div className="relative">
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`w-10 h-10 rounded-xl ${totalProfit >= 0 ? 'bg-luxury-green/10 border-luxury-green/20' : 'bg-luxury-rose/10 border-luxury-rose/20'} border flex items-center justify-center`}>
-                  <TrendingUp className={`w-5 h-5 ${totalProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`} />
-                </div>
-                <span className="text-xs text-white/40 uppercase tracking-wider">{t('squad.totalProfit')}</span>
-              </div>
-              <p className={`text-3xl font-bold font-mono ${totalProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
-                {totalProfit >= 0 ? '+' : ''}{totalProfit.toLocaleString()}
-              </p>
-              <p className={`text-sm mt-1 ${profitPercentage >= 0 ? 'text-luxury-green/70' : 'text-luxury-rose/70'}`}>
-                {profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(2)}%
-              </p>
-            </div>
-          </div>
-
-          <div className="card-luxury rounded-2xl p-5 relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-luxury-cyan/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-luxury-cyan/10 border border-luxury-cyan/20 flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-luxury-cyan" />
-                </div>
-                <span className="text-xs text-white/40 uppercase tracking-wider">{t('squad.avgWinRate')}</span>
-              </div>
-              <p className="text-3xl font-bold text-luxury-cyan font-mono">{avgWinRate}%</p>
-            </div>
+          <div className="flex justify-between mt-3 text-xs text-white/40">
+            <span>竞技场中: {inArenaAgents.length}</span>
+            <span>空闲: {idleAgents.length}</span>
           </div>
         </div>
 
-        {/* 快速铸造区 */}
-        <div className="card-luxury rounded-2xl overflow-hidden mb-8 border-luxury-purple/20">
-          <div className="px-4 sm:px-6 py-5 border-b border-white/5 bg-gradient-to-r from-luxury-purple/10 to-transparent">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Sparkles className="w-6 h-6 text-luxury-purple" />
-                <div>
-                  <h2 className="text-lg font-semibold text-white">{t('squad.quickMint')}</h2>
-                  <p className="text-xs text-white/40">{t('squad.mintCost')}: <span className="text-luxury-gold">{mintCost} $MON</span> / {t('squad.each')}</p>
-                </div>
+        {/* 快速铸造 */}
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 mb-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                <Plus className="w-6 h-6 text-purple-400" />
               </div>
-              <div className="flex items-center gap-2 sm:gap-4">
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  {[1, 5, 10].map(count => (
-                    <button
-                      key={count}
-                      onClick={() => setMintCount(count)}
-                      className={`px-3 sm:px-4 py-2 rounded-lg font-medium transition-all min-h-[44px] ${
-                        mintCount === count
-                          ? 'bg-luxury-purple text-white shadow-lg shadow-luxury-purple/25'
-                          : 'bg-void-light text-white/60 hover:text-white border border-white/10'
-                      }`}
-                    >
-                      {count}<span className="hidden sm:inline">{t('squad.count')}</span>
-                    </button>
-                  ))}
-                </div>
-                
-                <button
-                  onClick={handleMint}
-                  disabled={isMinting || wallet.balance < mintCost * mintCount}
-                  className="group relative px-4 sm:px-6 py-2.5 rounded-lg overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-luxury-purple via-luxury-purple-light to-luxury-cyan" />
-                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-
-                  <span className="relative flex items-center gap-2 text-white font-semibold text-sm whitespace-nowrap">
-                    {isMinting ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span className="hidden sm:inline">{t('squad.minting')}...</span>
-                        <span className="sm:hidden">{t('squad.minting')}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4" />
-                        <span className="hidden sm:inline">{t('squad.mint')} ({mintCost * mintCount} $MON)</span>
-                        <span className="sm:hidden">{t('squad.mint')}</span>
-                      </>
-                    )}
-                  </span>
-                </button>
+              <div>
+                <h3 className="text-lg font-semibold text-white">铸造新 Agent</h3>
+                <p className="text-sm text-white/40">消耗 {mintCost} $MON 铸造一个交易 Agent</p>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* 筛选器 & 排序 & 批量操作 */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-            {/* 状态筛选 */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex items-center gap-2 text-white/40 shrink-0">
-                <Filter className="w-4 h-4" />
-                <span className="text-sm hidden sm:inline">{t('arena.filter')}</span>
-              </div>
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                {(['all', 'idle', 'in_arena', 'fighting', 'eliminated'] as const).map(key => {
-                  const config = getFilterConfig(key);
-                  const Icon = config.icon;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setFilter(key)}
-                      className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-lg text-xs font-medium transition-all min-h-[44px] ${
-                        filter === key
-                          ? `${config.color} text-white shadow-lg`
-                          : 'bg-void-light text-white/60 hover:text-white border border-white/10'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span className="hidden sm:inline">{config.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 排序 */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex items-center gap-2 text-white/40 shrink-0">
-                <TrendingUp className="w-4 h-4" />
-                <span className="text-sm hidden sm:inline">{t('squad.sortBy') || '排序'}</span>
-              </div>
-              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 -mx-1 px-1 sm:mx-0 sm:px-0 scrollbar-hide">
-                {([
-                  { key: 'balance', label: t('squad.balance') || '余额', icon: Wallet },
-                  { key: 'profit', label: t('squad.profit') || '收益', icon: TrendingUp },
-                  { key: 'winRate', label: t('squad.winRate') || '胜率', icon: Target },
-                  { key: 'status', label: t('squad.status') || '状态', icon: Zap }
-                ] as const).map(({ key, label, icon: Icon }) => (
+            <div className="flex items-center gap-3">
+              <div className="flex bg-white/5 rounded-lg p-1">
+                {[1, 5, 10].map(n => (
                   <button
-                    key={key}
-                    onClick={() => setSortBy(key as typeof sortBy)}
-                    className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-xs font-medium transition-all min-h-[44px] whitespace-nowrap ${
-                      sortBy === key
-                        ? 'bg-luxury-cyan/20 text-luxury-cyan border border-luxury-cyan/30'
-                        : 'bg-void-light text-white/60 hover:text-white border border-white/10'
+                    key={n}
+                    onClick={() => setMintCount(n)}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      mintCount === n ? 'bg-purple-500 text-white' : 'text-white/60 hover:text-white'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
-                    <span className="hidden sm:inline">{label}</span>
+                    {n}
                   </button>
                 ))}
               </div>
+              <button
+                onClick={handleMint}
+                disabled={isMinting || wallet.balance < mintCost * mintCount}
+                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl font-medium transition-all disabled:opacity-50"
+              >
+                {isMinting ? '铸造中...' : `铸造 (${mintCost * mintCount} $MON)`}
+              </button>
             </div>
           </div>
-
-          {/* 批量操作入口 */}
-          {myAgents.length > 0 && (
-            <div className="relative">
-              <button
-                onClick={() => setShowBatchPanel(!showBatchPanel)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all min-h-[44px] ${
-                  showBatchPanel
-                    ? 'bg-luxury-cyan text-white shadow-lg shadow-luxury-cyan/25'
-                    : 'bg-void-panel border border-white/10 text-white/70 hover:text-white hover:border-luxury-cyan/50'
-                }`}
-              >
-                <Zap className="w-4 h-4" />
-                <span className="hidden sm:inline">{t('squad.batchOperations')}</span>
-                <span className="sm:hidden">{t('squad.batch')}</span>
-                {selectedAgents.size > 0 && (
-                  <span className="bg-white/20 px-1.5 py-0.5 rounded-full text-xs">
-                    {selectedAgents.size}
-                  </span>
-                )}
-              </button>
-
-              {showBatchPanel && (
-                <div className="absolute top-full right-0 mt-2 w-80 bg-void-panel rounded-xl border border-white/10 p-4 z-50 shadow-2xl">
-                  <div className="flex gap-2 mb-4 p-1 bg-void rounded-lg">
-                    <button
-                      onClick={() => setSelectedAgents(new Set())}
-                      className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${
-                        selectedAgents.size === 0
-                          ? 'bg-luxury-cyan text-white'
-                          : 'text-white/60 hover:text-white'
-                      }`}
-                    >
-                      {t('squad.allOperations')}
-                    </button>
-                    <button
-                      onClick={() => setSelectedAgents(new Set())}
-                      className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${
-                        selectedAgents.size > 0
-                          ? 'bg-luxury-cyan text-white'
-                          : 'text-white/60 hover:text-white'
-                      }`}
-                    >
-                      {t('squad.selectOperations')}
-                    </button>
-                  </div>
-
-                  {selectedAgents.size === 0 ? (
-                    <div className="space-y-3">
-                      <div className="p-3 bg-void rounded-lg border border-white/5">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-7 h-7 rounded-lg bg-luxury-green flex items-center justify-center">
-                            <BatteryCharging className="w-3.5 h-3.5 text-white" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-white">{t('squad.rechargeAll')}</p>
-                            <p className="text-[10px] text-white/40">{t('squad.distributeToAll')} {idleAgents.length} {t('squad.agents')}</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <input
-                            type="number"
-                            value={batchAmount}
-                            onChange={(e) => setBatchAmount(e.target.value)}
-                            placeholder={t('wallet.totalAmount')}
-                            className="w-20 bg-void-panel border border-white/10 rounded-lg px-2 py-1.5 text-sm text-white placeholder:text-white/30 focus:border-luxury-green focus:outline-none"
-                          />
-                          <button
-                            onClick={handleRechargeAll}
-                            disabled={!batchAmount || parseFloat(batchAmount) <= 0 || idleAgents.length === 0}
-                            className="flex-1 px-3 py-1.5 rounded-lg bg-luxury-green text-white text-sm font-medium hover:bg-luxury-green/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                          >
-                            {t('wallet.recharge')}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="p-3 bg-void rounded-lg border border-white/5">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-7 h-7 rounded-lg bg-luxury-gold flex items-center justify-center">
-                            <Rocket className="w-3.5 h-3.5 text-white" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-white">{t('squad.joinAll')}</p>
-                            <p className="text-[10px] text-white/40">{t('squad.joinAllDesc')}</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={handleJoinAllArena}
-                          disabled={canJoinArena.length === 0}
-                          className="w-full py-2 rounded-lg bg-luxury-gold text-white text-sm font-medium hover:bg-luxury-gold/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {t('arena.join')} ({canJoinArena.length})
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-2 bg-void rounded-lg border border-white/5">
-                        <button
-                          onClick={toggleSelectAll}
-                          className="flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors"
-                        >
-                          {selectedAgents.size === idleAgents.length && idleAgents.length > 0 ? (
-                            <CheckSquare className="w-4 h-4 text-luxury-cyan" />
-                          ) : (
-                            <Square className="w-4 h-4" />
-                          )}
-                          <span className="text-xs">{t('squad.selectAll')} ({selectedAgents.size}/{idleAgents.length})</span>
-                        </button>
-                        <button
-                          onClick={() => setSelectedAgents(new Set())}
-                          className="text-[10px] text-white/40 hover:text-white/60 transition-colors"
-                        >
-                          {t('squad.clear')}
-                        </button>
-                      </div>
-
-                      <button
-                        onClick={handleBatchJoinArena}
-                        disabled={selectedAgents.size === 0}
-                        className="w-full py-2 rounded-lg bg-luxury-gold text-white text-sm font-medium hover:bg-luxury-gold/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {t('squad.joinArena')} ({selectedAgents.size})
-                      </button>
-
-                      <div className="flex gap-2">
-                        <input
-                          type="number"
-                          value={batchAmount}
-                          onChange={(e) => setBatchAmount(e.target.value)}
-                          placeholder={t('wallet.totalAmount')}
-                          className="w-20 bg-void border border-white/10 rounded-lg px-2 py-1.5 text-sm text-white placeholder:text-white/30 focus:border-luxury-green focus:outline-none"
-                        />
-                        <button
-                          onClick={handleBatchRecharge}
-                          disabled={!batchAmount || parseFloat(batchAmount) <= 0}
-                          className="flex-1 px-3 py-1.5 rounded-lg bg-luxury-green text-white text-sm font-medium hover:bg-luxury-green/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {t('wallet.recharge')} ({selectedAgents.size})
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Agents 列表布局 - 全新设计 */}
-        {filteredAgents.length === 0 ? (
-          <div className="card-luxury rounded-2xl p-16 text-center">
-            <div className="w-24 h-24 rounded-3xl bg-void-light/50 border border-white/5 flex items-center justify-center mx-auto mb-6">
-              <Users className="w-12 h-12 text-white/20" />
+        {/* 筛选和排序 */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <div className="flex items-center gap-2 bg-white/5 rounded-xl p-1">
+            {(['all', 'idle', 'in_arena', 'fighting', 'liquidated'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  filter === f ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+                }`}
+              >
+                {f === 'all' ? '全部' : f === 'idle' ? '空闲' : f === 'in_arena' ? '竞技场' : f === 'fighting' ? '战斗中' : '已爆仓'}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-sm text-white/40">排序:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+            >
+              <option value="balance">余额</option>
+              <option value="profit">盈亏</option>
+              <option value="leverage">杠杆</option>
+              <option value="status">状态</option>
+            </select>
+          </div>
+        </div>
+
+        {/* 批量操作栏 */}
+        {selectedAgents.size > 0 && (
+          <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-6 flex items-center justify-between">
+            <span className="text-white font-medium">已选择 {selectedAgents.size} 个 Agent</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                placeholder="金额"
+                value={actionAmount}
+                onChange={(e) => setActionAmount(e.target.value)}
+                className="w-24 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white"
+              />
+              <button
+                onClick={handleBatchDeposit}
+                className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg text-sm font-medium"
+              >
+                批量充值
+              </button>
+              <button
+                onClick={handleBatchJoin}
+                className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-lg text-sm font-medium"
+              >
+                批量入场
+              </button>
+              <button
+                onClick={() => setSelectedAgents(new Set())}
+                className="px-4 py-2 text-white/40 hover:text-white"
+              >
+                取消
+              </button>
             </div>
-            <h2 className="text-2xl font-bold text-white mb-3">
-              {myAgents.length === 0 ? t('squad.noAgents') : t('squad.noFilteredAgents')}
-            </h2>
-            <p className="text-white/40">
-              {myAgents.length === 0 ? t('squad.mintFirst') : t('squad.tryOtherFilter')}
-            </p>
+          </div>
+        )}
+
+        {/* Agent 列表 */}
+        {filteredAgents.length === 0 ? (
+          <div className="text-center py-20">
+            <Users className="w-16 h-16 text-white/10 mx-auto mb-4" />
+            <p className="text-white/40">暂无 Agent</p>
+            <p className="text-sm text-white/20 mt-2">铸造您的第一个交易 Agent 开始游戏</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {/* 表头 */}
-            <div className="hidden lg:grid grid-cols-12 gap-4 px-4 py-2 text-xs text-white/40 uppercase tracking-wider">
-              <div className="col-span-3">Agent</div>
-              <div className="col-span-2 text-center">余额 / 盈亏</div>
-              <div className="col-span-2 text-center">战绩</div>
-              <div className="col-span-2 text-center">属性</div>
-              <div className="col-span-2 text-center">状态</div>
-              <div className="col-span-1 text-right">操作</div>
-            </div>
-            
-            {/* Agent列表 */}
+          <div className="grid gap-3">
             {filteredAgents.map((agent, index) => (
-              <SquadAgentRow
+              <AgentCard
                 key={agent.id}
                 agent={agent}
                 index={index}
                 isSelected={selectedAgents.has(agent.id)}
-                showBatchPanel={showBatchPanel}
-                onToggleSelection={() => toggleAgentSelection(agent.id)}
+                onToggle={() => toggleAgentSelection(agent.id)}
+                onAction={() => setShowActionModal(agent.id)}
               />
             ))}
           </div>
         )}
       </div>
 
-      <MintingModal
-        isOpen={showMintModal}
-        isMinting={isMinting}
-        mintedAgents={mintedAgents}
-        onClose={() => setShowMintModal(false)}
-      />
+      {/* 操作弹窗 */}
+      {showActionModal && (
+        <ActionModal
+          agent={myAgents.find(a => a.id === showActionModal)!}
+          onClose={() => setShowActionModal(null)}
+        />
+      )}
     </div>
   );
 };
 
-// SquadAgentRow 组件 - 列表行设计
-interface SquadAgentRowProps {
+// 统计卡片
+const StatCard = ({ icon: Icon, label, value, color }: { icon: any, label: string, value: string | number, color: string }) => {
+  const colors: Record<string, string> = {
+    purple: 'from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400',
+    amber: 'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
+    green: 'from-green-500/20 to-green-600/10 border-green-500/30 text-green-400',
+    red: 'from-red-500/20 to-red-600/10 border-red-500/30 text-red-400',
+    cyan: 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  };
+  return (
+    <div className={`bg-gradient-to-br ${colors[color]} border rounded-2xl p-5`}>
+      <Icon className="w-6 h-6 mb-3" />
+      <p className="text-2xl font-bold text-white">{value}</p>
+      <p className="text-sm text-white/50 mt-1">{label}</p>
+    </div>
+  );
+};
+
+// Agent 卡片
+const AgentCard = ({ agent, index, isSelected, onToggle, onAction }: {
   agent: Agent;
   index: number;
   isSelected: boolean;
-  showBatchPanel: boolean;
-  onToggleSelection: () => void;
-}
-
-const SquadAgentRow: React.FC<SquadAgentRowProps> = ({
-  agent,
-  index,
-  isSelected,
-  showBatchPanel,
-  onToggleSelection,
+  onToggle: () => void;
+  onAction: () => void;
 }) => {
-  const { joinArena, leaveArena } = useGameStore();
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [isRechargeOpen, setIsRechargeOpen] = useState(false);
-  
-  const rarityColors: Record<string, string> = {
-    common: '#9ca3af',
-    rare: '#3b82f6',
-    epic: '#a855f7',
-    legendary: '#f59e0b',
-    mythic: '#ef4444',
+  const { joinArena, leaveArena, allocateFunds, withdrawFromAgent, updateAgentLeverage, removeAgent } = useGameStore();
+  const [showDetail, setShowDetail] = useState(false);
+
+  const pnlPercent = agent.initialBalance > 0
+    ? ((agent.balance - agent.initialBalance) / agent.initialBalance) * 100
+    : 0;
+
+  const statusColors = {
+    idle: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30',
+    in_arena: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+    fighting: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
+    liquidated: 'bg-red-500/10 text-red-400 border-red-500/30',
   };
-  
-  const rarityColor = rarityColors[agent.rarity] || '#9ca3af';
-  
-  const statusConfig = {
-    idle: { label: '空闲', color: 'text-luxury-cyan', bg: 'bg-luxury-cyan/10', border: 'border-luxury-cyan/30' },
-    in_arena: { label: '待战', color: 'text-luxury-gold', bg: 'bg-luxury-gold/10', border: 'border-luxury-gold/30' },
-    fighting: { label: '战斗中', color: 'text-luxury-rose', bg: 'bg-luxury-rose/10', border: 'border-luxury-rose/30' },
-    eliminated: { label: '已淘汰', color: 'text-gray-500', bg: 'bg-gray-500/10', border: 'border-gray-500/30' },
+
+  const statusLabels = {
+    idle: '空闲',
+    in_arena: '竞技场',
+    fighting: '战斗中',
+    liquidated: '已爆仓',
   };
-  
-  const status = statusConfig[agent.status];
-  const winRate = agent.totalBattles > 0 ? Math.round((agent.wins / agent.totalBattles) * 100) : 0;
-  
+
   return (
     <>
       <div
-        className={`group relative bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/[0.12] rounded-xl transition-all duration-200 cursor-pointer ${
-          isSelected ? 'ring-2 ring-luxury-cyan border-luxury-cyan/50' : ''
-        }`}
+        className={`group bg-white/[0.02] hover:bg-white/[0.04] border ${
+          isSelected ? 'border-purple-500/50' : 'border-white/[0.06] hover:border-white/[0.12]'
+        } rounded-xl p-4 transition-all cursor-pointer`}
+        onClick={onAction}
         style={{ animationDelay: `${index * 30}ms` }}
-        onClick={() => setIsDetailOpen(true)}
       >
-        <div className="p-3 lg:py-3 lg:px-4">
-          {/* 移动端布局 */}
-          <div className="lg:hidden">
-            <div className="flex items-center gap-3">
-              {/* 选择框 */}
-              {showBatchPanel && agent.status === 'idle' && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onToggleSelection(); }}
-                  className={`flex-shrink-0 w-6 h-6 rounded-md border flex items-center justify-center transition-colors ${
-                    isSelected
-                      ? 'bg-luxury-cyan border-luxury-cyan'
-                      : 'border-white/20 hover:border-luxury-cyan'
-                  }`}
-                >
-                  {isSelected && <CheckSquare className="w-4 h-4 text-white" />}
-                </button>
+        <div className="flex items-center gap-4">
+          {/* 选择框 */}
+          {agent.status === 'idle' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggle(); }}
+              className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                isSelected ? 'bg-purple-500 border-purple-500' : 'border-white/20 hover:border-purple-500'
+              }`}
+            >
+              {isSelected && <CheckSquare className="w-3.5 h-3.5 text-white" />}
+            </button>
+          )}
+
+          {/* 头像 */}
+          <div className="relative">
+            <div
+              className="w-14 h-14 rounded-xl overflow-hidden"
+              style={{ border: `2px solid ${agent.position === 'long' ? '#22c55e' : '#ef4444'}` }}
+            >
+              {agent.image ? (
+                <img src={agent.image} alt={agent.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-white/5 flex items-center justify-center text-2xl">
+                  {agent.position === 'long' ? '🐂' : '🐻'}
+                </div>
               )}
-              
-              {/* 头像 */}
-              <div 
-                className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0"
-                style={{ border: `2px solid ${rarityColor}` }}
-              >
-                {agent.image ? (
-                  <img src={agent.image} alt={agent.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-void-light flex items-center justify-center">
-                    <span className="text-lg">🤖</span>
-                  </div>
-                )}
-              </div>
-              
-              {/* 主要信息 */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h4 className="font-semibold text-white truncate">{agent.name}</h4>
-                  <span className="text-xs text-white/30">#{agent.nftId}</span>
-                </div>
-                <div className="flex items-center gap-3 mt-1">
-                  <span className="text-sm font-mono font-bold text-luxury-gold">${agent.balance.toLocaleString()}</span>
-                  <span className={`text-xs ${agent.netProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
-                    {agent.netProfit >= 0 ? '+' : ''}{agent.netProfit}
-                  </span>
-                </div>
-              </div>
-              
-              {/* 操作按钮 */}
-              <div className="relative z-10" onClick={(e) => e.stopPropagation()}>
-                {agent.status === 'idle' && agent.balance > 0 && (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      joinArena(agent.id);
-                    }}
-                    className="p-2 rounded-lg bg-luxury-gold/10 hover:bg-luxury-gold/20 text-luxury-gold transition-colors relative z-20"
-                  >
-                    <Swords className="w-4 h-4" />
-                  </button>
-                )}
-                {agent.status === 'in_arena' && agent.balance > 0 && (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      leaveArena(agent.id);
-                    }}
-                    className="p-2 rounded-lg bg-luxury-rose/10 hover:bg-luxury-rose/20 text-luxury-rose transition-colors relative z-20"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                )}
-                {agent.balance <= 0 && (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsRechargeOpen(true);
-                    }}
-                    className="p-2 rounded-lg bg-luxury-cyan/10 hover:bg-luxury-cyan/20 text-luxury-cyan transition-colors relative z-20"
-                  >
-                    <Wallet className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
             </div>
-            
-            {/* 额外信息 */}
-            <div className="flex items-center gap-4 mt-2 pt-2 border-t border-white/5">
-              <div className="flex items-center gap-1 text-xs">
-                <Target className="w-3 h-3 text-white/40" />
-                <span className={winRate >= 60 ? 'text-luxury-green' : winRate >= 40 ? 'text-luxury-amber' : 'text-luxury-rose'}>
-                  {winRate}%
-                </span>
-              </div>
-              <div className="flex items-center gap-1 text-xs text-white/40">
-                <Swords className="w-3 h-3" />
-                <span>{agent.totalBattles}场</span>
-              </div>
-              <div className={`text-xs px-2 py-0.5 rounded ${status.bg} ${status.color}`}>
-                {status.label}
-              </div>
+            <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+              agent.position === 'long' ? 'bg-green-500' : 'bg-red-500'
+            }`}>
+              {agent.position === 'long' ? 'L' : 'S'}
             </div>
           </div>
-          
-          {/* 桌面端布局 - 12列网格 */}
-          <div className="hidden lg:grid grid-cols-12 gap-4 items-center">
-            {/* 选择框 + Agent信息 */}
-            <div className="col-span-3 flex items-center gap-3">
-              {showBatchPanel && agent.status === 'idle' && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onToggleSelection(); }}
-                  className={`flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                    isSelected
-                      ? 'bg-luxury-cyan border-luxury-cyan'
-                      : 'border-white/20 hover:border-luxury-cyan'
-                  }`}
-                >
-                  {isSelected && <CheckSquare className="w-3.5 h-3.5 text-white" />}
-                </button>
-              )}
-              
-              <div 
-                className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0"
-                style={{ border: `2px solid ${rarityColor}` }}
-              >
-                {agent.image ? (
-                  <img src={agent.image} alt={agent.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-void-light flex items-center justify-center">
-                    <span>🤖</span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="min-w-0">
-                <h4 className="font-semibold text-white truncate">{agent.name}</h4>
-                <span className="text-xs text-white/30">#{agent.nftId}</span>
-              </div>
-            </div>
-            
-            {/* 余额 / 盈亏 */}
-            <div className="col-span-2 text-center">
-              <div className="text-sm font-mono font-bold text-luxury-gold">${agent.balance.toLocaleString()}</div>
-              <div className={`text-xs ${agent.netProfit >= 0 ? 'text-luxury-green' : 'text-luxury-rose'}`}>
-                {agent.netProfit >= 0 ? '+' : ''}{agent.netProfit.toLocaleString()}
-              </div>
-            </div>
-            
-            {/* 战绩 */}
-            <div className="col-span-2 text-center">
-              <div className="flex items-center justify-center gap-1">
-                <Target className="w-3.5 h-3.5 text-white/40" />
-                <span className={`text-sm font-mono font-semibold ${
-                  winRate >= 60 ? 'text-luxury-green' : winRate >= 40 ? 'text-luxury-amber' : 'text-luxury-rose'
-                }`}>
-                  {winRate}%
-                </span>
-              </div>
-              <div className="text-xs text-white/40">{agent.totalBattles}场 / {agent.tournamentWins}冠</div>
-            </div>
-            
-            {/* 属性 */}
-            <div className="col-span-2 text-center">
-              <div className="flex items-center justify-center gap-2 text-xs">
-                <span className="text-luxury-rose">{agent.attack}</span>
-                <span className="text-white/20">/</span>
-                <span className="text-luxury-cyan">{agent.defense}</span>
-                <span className="text-white/20">/</span>
-                <span className="text-luxury-green">{agent.speed}</span>
-              </div>
-              <div className="text-[10px] text-white/30 mt-0.5">攻/防/速</div>
-            </div>
-            
-            {/* 状态 */}
-            <div className="col-span-2 text-center">
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs ${status.bg} ${status.color} ${status.border} border`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${agent.status === 'fighting' ? 'animate-pulse' : ''} ${
-                  agent.status === 'idle' ? 'bg-luxury-cyan' :
-                  agent.status === 'in_arena' ? 'bg-luxury-gold' :
-                  agent.status === 'fighting' ? 'bg-luxury-rose' : 'bg-gray-500'
-                }`} />
-                {status.label}
+
+          {/* 信息 */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h4 className="font-semibold text-white">{agent.name}</h4>
+              <span className={`px-2 py-0.5 rounded text-xs border ${statusColors[agent.status]}`}>
+                {statusLabels[agent.status]}
               </span>
             </div>
-            
-            {/* 操作 */}
-            <div className="col-span-1 text-right relative z-10" onClick={(e) => e.stopPropagation()}>
-              {/* 有余额且在idle状态 - 显示加入竞技场按钮 */}
-              {agent.status === 'idle' && agent.balance > 0 && (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    joinArena(agent.id);
-                  }}
-                  className="p-2 rounded-lg bg-luxury-gold/10 hover:bg-luxury-gold/20 text-luxury-gold transition-colors relative z-20"
-                  title="加入竞技场"
-                >
-                  <Swords className="w-4 h-4" />
-                </button>
-              )}
-              {/* 有余额且在in_arena状态 - 显示退出竞技场按钮 */}
-              {agent.status === 'in_arena' && agent.balance > 0 && (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    leaveArena(agent.id);
-                  }}
-                  className="p-2 rounded-lg bg-luxury-rose/10 hover:bg-luxury-rose/20 text-luxury-rose transition-colors relative z-20"
-                  title="退出竞技场"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              )}
-              {/* 战斗中状态 */}
-              {agent.status === 'fighting' && (
-                <span className="text-xs text-luxury-rose">战斗中</span>
-              )}
-              {/* 无余额状态 - 显示充值按钮 */}
-              {agent.balance <= 0 && (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setIsRechargeOpen(true);
-                  }}
-                  className="p-2 rounded-lg bg-luxury-cyan/10 hover:bg-luxury-cyan/20 text-luxury-cyan transition-colors relative z-20"
-                  title="充值"
-                >
-                  <Wallet className="w-4 h-4" />
-                </button>
-              )}
+            <div className="flex items-center gap-4 mt-1 text-sm">
+              <span className="font-mono text-amber-400">${agent.balance.toLocaleString()}</span>
+              <span className={`font-mono ${pnlPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(1)}%
+              </span>
+              <span className="text-white/40">{agent.leverage}x 杠杆</span>
             </div>
+          </div>
+
+          {/* 操作按钮 */}
+          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            {agent.status === 'idle' && agent.balance > 0 && (
+              <button
+                onClick={() => joinArena(agent.id)}
+                className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-lg text-sm font-medium transition-colors"
+              >
+                入场
+              </button>
+            )}
+            {agent.status === 'in_arena' && (
+              <button
+                onClick={() => leaveArena(agent.id)}
+                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm font-medium transition-colors"
+              >
+                退出
+              </button>
+            )}
+            <button
+              onClick={() => setShowDetail(true)}
+              className="p-2 text-white/40 hover:text-white transition-colors"
+            >
+              <Settings2 className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </div>
-      
-      <AgentDetailModal
-        agent={agent}
-        isOpen={isDetailOpen}
-        onClose={() => setIsDetailOpen(false)}
-      />
-      
-      <QuickRechargeModal
-        agentId={agent.id}
-        agentName={agent.name}
-        isOpen={isRechargeOpen}
-        onClose={() => setIsRechargeOpen(false)}
-        agentStatus={agent.status}
-      />
+
+      {/* 详情弹窗 */}
+      {showDetail && (
+        <AgentDetailModal
+          agent={agent}
+          onClose={() => setShowDetail(false)}
+        />
+      )}
     </>
+  );
+};
+
+// Agent 详情弹窗
+const AgentDetailModal = ({ agent, onClose }: { agent: Agent; onClose: () => void }) => {
+  const { allocateFunds, withdrawFromAgent, updateAgentLeverage, removeAgent } = useGameStore();
+  const [amount, setAmount] = useState('');
+  const [activeTab, setActiveTab] = useState<'overview' | 'settings'>('overview');
+
+  const leverages = [1, 2, 5, 10, 20, 50, 100];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-[#0f0f14] border border-white/10 rounded-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/* 头部 */}
+        <div className="p-6 border-b border-white/10">
+          <div className="flex items-center gap-4">
+            <div
+              className="w-16 h-16 rounded-xl overflow-hidden"
+              style={{ border: `2px solid ${agent.position === 'long' ? '#22c55e' : '#ef4444'}` }}
+            >
+              {agent.image ? (
+                <img src={agent.image} alt={agent.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-white/5 flex items-center justify-center text-3xl">
+                  {agent.position === 'long' ? '🐂' : '🐻'}
+                </div>
+              )}
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-white">{agent.name}</h3>
+              <p className="text-sm text-white/40">{agent.position === 'long' ? '做多' : '做空'} · {agent.leverage}x 杠杆</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 标签页 */}
+        <div className="flex border-b border-white/10">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`flex-1 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'overview' ? 'text-white border-b-2 border-purple-500' : 'text-white/40 hover:text-white'
+            }`}
+          >
+            概览
+          </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex-1 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'settings' ? 'text-white border-b-2 border-purple-500' : 'text-white/40 hover:text-white'
+            }`}
+          >
+            设置
+          </button>
+        </div>
+
+        {/* 内容 */}
+        <div className="p-6">
+          {activeTab === 'overview' ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/5 rounded-xl p-4">
+                  <p className="text-sm text-white/40 mb-1">当前余额</p>
+                  <p className="text-xl font-bold text-amber-400">${agent.balance.toLocaleString()}</p>
+                </div>
+                <div className="bg-white/5 rounded-xl p-4">
+                  <p className="text-sm text-white/40 mb-1">总盈亏</p>
+                  <p className={`text-xl font-bold ${agent.netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {agent.netProfit >= 0 ? '+' : ''}${agent.netProfit.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white/5 rounded-xl p-4">
+                <p className="text-sm text-white/40 mb-3">资金操作</p>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    placeholder="金额"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white"
+                  />
+                  <button
+                    onClick={() => { allocateFunds(agent.id, parseFloat(amount)); setAmount(''); }}
+                    disabled={!amount || parseFloat(amount) <= 0}
+                    className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg font-medium disabled:opacity-50"
+                  >
+                    充值
+                  </button>
+                  <button
+                    onClick={() => { withdrawFromAgent(agent.id, parseFloat(amount)); setAmount(''); }}
+                    disabled={!amount || parseFloat(amount) <= 0 || parseFloat(amount) > agent.balance}
+                    className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg font-medium disabled:opacity-50"
+                  >
+                    提现
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white/5 rounded-xl p-4">
+                <p className="text-sm text-white/40 mb-3">交易统计</p>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-lg font-bold text-white">{agent.totalBattles}</p>
+                    <p className="text-xs text-white/40">总场次</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-white">{agent.winRate}%</p>
+                    <p className="text-xs text-white/40">胜率</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-white">{agent.kills}</p>
+                    <p className="text-xs text-white/40">击杀</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-white/5 rounded-xl p-4">
+                <p className="text-sm text-white/40 mb-3">调整杠杆</p>
+                <div className="flex flex-wrap gap-2">
+                  {leverages.map(l => (
+                    <button
+                      key={l}
+                      onClick={() => updateAgentLeverage(agent.id, l)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        agent.leverage === l
+                          ? 'bg-purple-500 text-white'
+                          : 'bg-white/10 text-white/60 hover:text-white'
+                      }`}
+                    >
+                      {l}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white/5 rounded-xl p-4">
+                <p className="text-sm text-white/40 mb-3">危险操作</p>
+                <button
+                  onClick={() => { removeAgent(agent.id); onClose(); }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg font-medium transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  删除 Agent
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 操作弹窗
+const ActionModal = ({ agent, onClose }: { agent: Agent; onClose: () => void }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-[#0f0f14] border border-white/10 rounded-2xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-bold text-white mb-4">选择操作</h3>
+        <div className="space-y-2">
+          <button className="w-full flex items-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-colors">
+            <ArrowUpRight className="w-5 h-5 text-green-400" />
+            <span className="text-white">充值资金</span>
+          </button>
+          <button className="w-full flex items-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-colors">
+            <ArrowDownRight className="w-5 h-5 text-red-400" />
+            <span className="text-white">提取资金</span>
+          </button>
+          <button className="w-full flex items-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-colors">
+            <Settings2 className="w-5 h-5 text-purple-400" />
+            <span className="text-white">调整杠杆</span>
+          </button>
+          <button className="w-full flex items-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-colors">
+            <BarChart3 className="w-5 h-5 text-amber-400" />
+            <span className="text-white">查看详情</span>
+          </button>
+        </div>
+        <button
+          onClick={onClose}
+          className="w-full mt-4 py-3 text-white/40 hover:text-white transition-colors"
+        >
+          取消
+        </button>
+      </div>
+    </div>
   );
 };
 

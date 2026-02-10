@@ -1,14 +1,13 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useGameStore } from '../store/gameStore';
 import ArenaCanvas from '../components/ArenaCanvas';
-import BattleLog from '../components/BattleLog';
-import AgentCard from '../components/AgentCard';
-import { Agent } from '../types';
-import { Trophy, Plus, Wallet, X, ChevronRight, Users } from 'lucide-react';
+import PriceHeader from '../components/PriceHeader';
+import { Agent, PriceData, CryptoSymbol } from '../types';
+import { Trophy, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { priceService } from '../services/priceService';
 
-// 生成今日 TOP 100 排行榜数据
+// 生成 TOP 100 数据
 const generateTop100 = () => {
   const names = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta', 'Iota', 'Kappa'];
   const colors = ['text-luxury-gold', 'text-luxury-cyan', 'text-luxury-purple', 'text-luxury-rose', 'text-luxury-green'];
@@ -20,7 +19,7 @@ const generateTop100 = () => {
   })).sort((a, b) => b.profit - a.profit);
 };
 
-// 跑马灯组件
+// 跑马灯
 const LeaderboardMarquee: React.FC = () => {
   const top100 = useMemo(() => generateTop100(), []);
   const navigate = useNavigate();
@@ -28,12 +27,10 @@ const LeaderboardMarquee: React.FC = () => {
   return (
     <div className="w-full bg-void-panel/80 border border-white/5 rounded-xl overflow-hidden mb-4">
       <div className="flex items-center">
-        {/* 标题 */}
         <div className="flex-shrink-0 px-4 py-2 bg-luxury-gold/10 border-r border-white/10 flex items-center gap-2">
           <Trophy className="w-4 h-4 text-luxury-gold" />
           <span className="text-xs font-semibold text-luxury-gold">TOP Profit</span>
         </div>
-        {/* 滚动内容 */}
         <div className="flex-1 overflow-hidden relative">
           <div className="flex animate-marquee whitespace-nowrap">
             {top100.map((agent, index) => (
@@ -46,11 +43,9 @@ const LeaderboardMarquee: React.FC = () => {
             ))}
           </div>
         </div>
-        {/* 进入榜单按钮 */}
         <button
           onClick={() => navigate('/leaderboard')}
-          className="flex-shrink-0 px-3 py-2 bg-luxury-gold/10 border-l border-white/10 hover:bg-luxury-gold/20 active:bg-luxury-gold/30 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-          title="查看完整榜单"
+          className="flex-shrink-0 px-3 py-2 bg-luxury-gold/10 border-l border-white/10 hover:bg-luxury-gold/20 transition-colors"
         >
           <ChevronRight className="w-5 h-5 text-luxury-gold" />
         </button>
@@ -59,556 +54,181 @@ const LeaderboardMarquee: React.FC = () => {
   );
 };
 
-// 战斗阶段类型 - 与 store 中的 RoundPhase 保持一致
-type BattlePhase = 'waiting' | 'selecting' | 'loading' | 'countdown' | 'fighting' | 'settlement';
+// 阵营列表项
+const SideAgentItem: React.FC<{ agent: Agent; side: 'long' | 'short' }> = ({ agent, side }) => {
+  const isLong = side === 'long';
+  const pnl = agent.netProfit;
+  const isProfit = pnl >= 0;
+  const isMyAgent = agent.isPlayer;
 
-// 计时器状态
-interface TimerState {
-  phase: BattlePhase;
-  countdown: number;
-  round: number;
-  participants: Agent[];
-  selectedSlots: number[];
-}
+  return (
+    <div className={`flex items-center gap-2 p-2 rounded-lg ${
+      isMyAgent ? 'bg-luxury-cyan/20 border border-luxury-cyan/40' : 'bg-white/5'
+    }`}>
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
+        isLong ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+      }`}>
+        {agent.name.slice(0, 2).toUpperCase()}
+        {isMyAgent && <div className="absolute -top-1 -right-1 w-2 h-2 bg-cyan-400 rounded-full" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className={`text-xs font-medium truncate ${isMyAgent ? 'text-luxury-cyan' : 'text-white'}`}>
+          {agent.name}
+        </div>
+        <div className="text-[10px] text-white/40">{agent.leverage}x | ${agent.balance}</div>
+      </div>
+      <div className={`text-xs font-mono ${isProfit ? 'text-green-500' : 'text-red-500'}`}>
+        {isProfit ? '+' : ''}{pnl.toFixed(0)}
+      </div>
+    </div>
+  );
+};
 
 const Arena: React.FC = () => {
-  const { t } = useTranslation();
   const {
     arena,
     myAgents,
     systemAgents,
-    wallet,
-    myBattleLogs,
     initializeArena,
     setArenaPhase,
-    addBattleLog,
     updateParticipant,
-    setTop3,
+    updateArenaPrice,
   } = useGameStore();
 
-  const navigate = useNavigate();
-  const [showSettlement, setShowSettlement] = useState(false);
-
-  // 当前战斗轮次显示（战斗开始时固定，战斗结束后更新）
-  const [displayBattleRound, setDisplayBattleRound] = useState(1);
-
-  // 排序状态
-  const [sortBy] = useState<'balance' | 'winRate' | 'profit'>('balance');
-
-  // 用于测量左侧高度
-  // 移除 leftPanelRef 和 height calculation state
-  // const leftPanelRef = useRef<HTMLDivElement>(null);
-  // const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
-  // ... removed resize observer code ...
-
-  // 使用 ref 来管理计时器状态，避免闭包问题
-  const timerStateRef = useRef<TimerState>({
-    phase: 'waiting',
-    countdown: 0,
-    round: 1,
-    participants: [],
-    selectedSlots: [],
+  const [activeSymbol, setActiveSymbol] = useState<CryptoSymbol>('BTC');
+  const [priceData, setPriceData] = useState<PriceData>({
+    symbol: 'BTC',
+    price: 97245.32,
+    btcPrice: 97245.32,
+    priceChange24h: 1234.56,
+    priceChangePercent24h: 1.28,
+    secondChangePercent: 0,
+    fundingRate: 0.0001,
+    longShortRatio: 1.25,
+    high24h: 98500,
+    low24h: 95800,
+    volume24h: 28500,
+    lastUpdate: Date.now(),
+    cryptos: {
+      BTC: { symbol: 'BTC', price: 97245.32, priceChange24h: 1234.56, priceChangePercent24h: 1.28, fundingRate: 0.0001, longShortRatio: 1.25, high24h: 98500, low24h: 95800, volume24h: 28500, lastUpdate: Date.now() },
+      ETH: { symbol: 'ETH', price: 3856.78, priceChange24h: 45.23, priceChangePercent24h: 1.18, fundingRate: 0.0002, longShortRatio: 1.15, high24h: 3920, low24h: 3780, volume24h: 15000, lastUpdate: Date.now() },
+      SOL: { symbol: 'SOL', price: 198.45, priceChange24h: 3.45, priceChangePercent24h: 1.77, fundingRate: 0.0003, longShortRatio: 1.35, high24h: 205, low24h: 192, volume24h: 8000, lastUpdate: Date.now() },
+      MON: { symbol: 'MON', price: 2.35, priceChange24h: 0.08, priceChangePercent24h: 3.52, fundingRate: 0.0005, longShortRatio: 1.45, high24h: 2.45, low24h: 2.25, volume24h: 5000, lastUpdate: Date.now() },
+    },
   });
-  
-  // 用于强制重新渲染的 state
-  const [, forceUpdate] = useState({});
-  
-  // 同步 ref 状态到 store
-  const syncPhaseToStore = useCallback((phase: BattlePhase) => {
-    timerStateRef.current.phase = phase;
-    setArenaPhase(phase);
-    forceUpdate({}); // 触发重新渲染
-  }, [setArenaPhase]);
-  
-  const syncCountdownToStore = useCallback((countdown: number) => {
-    timerStateRef.current.countdown = countdown;
-    useGameStore.setState(state => ({
-      arena: { ...state.arena, countdown }
-    }));
-    forceUpdate({}); // 触发重新渲染
-  }, []);
-  
-  const syncParticipantsToStore = useCallback((participants: Agent[]) => {
-    timerStateRef.current.participants = participants;
-    useGameStore.setState(state => ({
-      arena: { ...state.arena, participants }
-    }));
-    forceUpdate({}); // 触发重新渲染
-  }, []);
-  
-  const syncSelectedSlotsToStore = useCallback((selectedSlots: number[]) => {
-    timerStateRef.current.selectedSlots = selectedSlots;
-    useGameStore.setState(state => ({
-      arena: { ...state.arena, selectedSlots }
-    }));
-    forceUpdate({}); // 触发重新渲染
-  }, []);
-  
-  // 初始化竞技场
+
+  // 初始化
   useEffect(() => {
     if (systemAgents.length === 0) {
       initializeArena();
     }
   }, [initializeArena, systemAgents.length]);
-  
-  // 观察用户Agents参与的战斗
+
+  // 价格服务
   useEffect(() => {
-    if (systemAgents.length === 0) return;
+    priceService.connect(false);
+    const unsubscribe = priceService.subscribe((data: PriceData) => {
+      setPriceData(data);
+      updateArenaPrice(data);
+    });
+    return () => unsubscribe();
+  }, [updateArenaPrice]);
 
-    let isActive = true;
-
-    const runObservationLoop = async () => {
-      // 初始等待
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      while (isActive) {
-        // 获取当前状态
-        const currentState = useGameStore.getState();
-        const currentMyAgents = currentState.myAgents;
-        const currentSystemAgents = currentState.systemAgents;
-        const totalRounds = currentState.totalSystemRounds;
-
-        // 检查用户是否有Agents在竞技场
-        const myArenaAgents = currentMyAgents.filter(a => a.status === 'in_arena');
-        const hasUserAgents = myArenaAgents.length > 0;
-
-        // ===== 开始战斗展示 =====
-        syncPhaseToStore('selecting');
-
-        // 使用当前系统总轮次作为观察轮次
-        setDisplayBattleRound(totalRounds);
-
-        let selectedParticipants: Agent[] = [];
-
-        if (hasUserAgents) {
-          // 用户有Agents在竞技场，优先展示用户的战斗
-          const observedAgent = myArenaAgents[Math.floor(Math.random() * myArenaAgents.length)];
-          const systemArenaAgents = currentSystemAgents.filter(a => a.status === 'in_arena' && a.id !== observedAgent.id);
-          const shuffledSystem = [...systemArenaAgents].sort(() => Math.random() - 0.5);
-          selectedParticipants = [observedAgent, ...shuffledSystem.slice(0, 9)];
-        } else {
-          // 用户未登录或没有Agents，展示系统Agents之间的战斗
-          const systemArenaAgents = currentSystemAgents.filter(a => a.status === 'in_arena');
-          if (systemArenaAgents.length < 2) {
-            syncPhaseToStore('waiting');
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            continue;
-          }
-          const shuffled = [...systemArenaAgents].sort(() => Math.random() - 0.5);
-          selectedParticipants = shuffled.slice(0, 10);
-        }
-
-        // 随机打乱位置
-        selectedParticipants = selectedParticipants.sort(() => Math.random() - 0.5);
-
-        // 重置参赛者状态
-        selectedParticipants.forEach(p => {
-          updateParticipant(p.id, { hp: p.maxHp, status: 'fighting' });
-        });
-
-        // 记录日志
-        const displayAgent = hasUserAgents ? selectedParticipants.find(p => myArenaAgents.some(ma => ma.id === p.id)) : selectedParticipants[0];
-        addBattleLog({
-          type: 'round_start',
-          message: hasUserAgents 
-            ? `观察战斗: ${displayAgent?.name || 'Agent'} 正在战斗!`
-            : `系统战斗: ${selectedParticipants[0]?.name || 'Agent'} vs ${selectedParticipants[1]?.name || 'Agent'}`,
-          isHighlight: true,
-        });
-
-        // ===== 2. 逐个落座动画 (3秒) =====
-        syncParticipantsToStore([]);
-        syncSelectedSlotsToStore([]);
-
-        const slotInterval = 3000 / selectedParticipants.length;
-
-        for (let i = 0; i < selectedParticipants.length; i++) {
-          if (!isActive) return;
-          await new Promise(resolve => setTimeout(resolve, slotInterval));
-
-          const currentParticipants: Agent[] = [];
-          for (let j = 0; j <= i; j++) {
-            currentParticipants[j] = selectedParticipants[j];
-          }
-
-          syncParticipantsToStore(currentParticipants);
-          syncSelectedSlotsToStore([...timerStateRef.current.selectedSlots, i]);
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        // ===== 3. 进入战场加载阶段 (1秒进度条) =====
-        syncPhaseToStore('loading');
-        syncCountdownToStore(100);
-
-        for (let progress = 0; progress <= 100; progress += 10) {
-          if (!isActive) return;
-          syncCountdownToStore(progress);
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-
-        // ===== 4. 战斗阶段 (30秒，与后台战斗同步) =====
-        syncPhaseToStore('fighting');
-        syncCountdownToStore(30);
-
-        for (let i = 30; i > 0; i--) {
-          if (!isActive) return;
-          syncCountdownToStore(i);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-
-        // ===== 5. 结算阶段 =====
-        syncPhaseToStore('settlement');
-
-        // 获取战斗结束时的实际结果（基于余额）
-        const battleEndState = useGameStore.getState();
-        console.log('[Settlement] selectedParticipants:', selectedParticipants.map(p => ({ id: p.id, name: p.name, balance: p.balance, status: p.status })));
-        console.log('[Settlement] myAgents:', battleEndState.myAgents.map(a => ({ id: a.id, name: a.name, balance: a.balance, status: a.status })));
-        const results = selectedParticipants.map(p => {
-          const currentAgent = battleEndState.myAgents.find(a => a.id === p.id) ||
-                               battleEndState.systemAgents.find(a => a.id === p.id);
-          console.log(`[Settlement] Agent ${p.name}: selected balance=${p.balance}, current balance=${currentAgent?.balance}, status=${currentAgent?.status}`);
-          // 有余额的Agent存活，余额为0的被淘汰
-          const survived = currentAgent ? currentAgent.balance > 0 : false;
-          // 计算实际收益（基于余额变化）
-          const profit = currentAgent ? currentAgent.balance - p.balance : 0;
-          return { agent: currentAgent || p, profit, survived };
-        });
-
-        // 排序获取TOP3
-        const top3 = results
-          .filter(r => r.survived)
-          .sort((a, b) => b.profit - a.profit)
-          .slice(0, 3);
-
-        setTop3(top3);
-        setShowSettlement(true);
-
-        addBattleLog({
-          type: 'round_end',
-          message: `战斗结束! 冠军: ${top3[0]?.agent.name || 'None'}`,
-          isHighlight: true,
-        });
-
-        // 更新每个Agent的战斗统计
-        results.forEach(r => {
-          const isWin = r.survived && r.profit > 0;
-          const isLoss = !r.survived || r.profit < 0;
-          
-          // r.agent 已经是战斗结束后的最新数据
-          const finalAgent = r.agent;
-          
-          if (finalAgent) {
-            const newWins = isWin ? finalAgent.wins + 1 : finalAgent.wins;
-            const newLosses = isLoss ? finalAgent.losses + 1 : finalAgent.losses;
-            const newTotalBattles = finalAgent.totalBattles + 1;
-            const newWinRate = Math.round((newWins / newTotalBattles) * 100);
-            const newNetProfit = finalAgent.netProfit + r.profit;
-            
-            // 添加战斗记录
-            const battleRecord = {
-              id: `battle-${Date.now()}-${finalAgent.id}`,
-              timestamp: Date.now(),
-              opponent: 'Arena Battle',
-              result: isWin ? 'win' : 'loss' as 'win' | 'loss',
-              damageDealt: Math.abs(r.profit),
-              damageTaken: 0,
-              earnings: r.profit,
-              kills: r.survived ? 1 : 0,
-              isTournament: false,
-            };
-            
-            // 有余额的Agent恢复为in_arena状态，余额为0的保持eliminated
-            const finalStatus = finalAgent.balance > 0 ? 'in_arena' : 'eliminated';
-            
-            console.log(`[Settlement] Updating ${finalAgent.name}: finalStatus=${finalStatus}, balance=${finalAgent.balance}`);
-            updateParticipant(finalAgent.id, {
-              status: finalStatus,
-              hp: finalAgent.maxHp,
-              balance: finalAgent.balance,
-              wins: newWins,
-              losses: newLosses,
-              totalBattles: newTotalBattles,
-              winRate: newWinRate,
-              netProfit: newNetProfit,
-              battleHistory: [battleRecord, ...finalAgent.battleHistory].slice(0, 50),
-            });
-          }
-        });
-        
-        // 结算后检查状态
-        const afterSettlementState = useGameStore.getState();
-        console.log('[Settlement] After settlement:', afterSettlementState.myAgents.map(a => ({ id: a.id, name: a.name, balance: a.balance, status: a.status })));
-
-        // 3秒倒计时后关闭结算层
-        for (let i = 3; i > 0; i--) {
-          if (!isActive) return;
-          // 更新倒计时显示
-          const settlementEl = document.getElementById('settlement-countdown');
-          if (settlementEl) {
-            settlementEl.textContent = `${i}秒后开始下一轮...`;
-          }
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-        setShowSettlement(false);
-        
-        // ===== 6. 等待阶段 =====
-        // 清空座位，显示等待状态
-        syncParticipantsToStore([]);
-        syncSelectedSlotsToStore([]);
-        syncPhaseToStore('waiting');
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-    };
+  // 实时战斗模式 - 所有在竞技场的agent都参与
+  useEffect(() => {
+    // 设置战斗阶段
+    setArenaPhase('fighting');
     
-    runObservationLoop();
+    // 获取所有在竞技场的agents作为参与者
+    const allArenaAgents = [...myAgents, ...systemAgents]
+      .filter(a => a.status === 'in_arena' || a.status === 'fighting')
+      .slice(0, 20); // 最多20个
     
-    return () => {
-      isActive = false;
-    };
-  }, [systemAgents.length]); // 只在 systemAgents 初始化后执行一次
-  
-  // 我的在竞技场的 Agents
-  const myArenaAgents = myAgents.filter(a => a.status === 'in_arena' || a.status === 'fighting');
-
-  // 排序后的 Agents
-  const sortedAgents = useMemo(() => {
-    return [...myAgents].sort((a: Agent, b: Agent) => {
-      switch (sortBy) {
-        case 'balance':
-          return b.balance - a.balance;
-        case 'winRate':
-          const totalA = a.wins + a.losses;
-          const totalB = b.wins + b.losses;
-          const winRateA = totalA > 0 ? a.wins / totalA : 0;
-          const winRateB = totalB > 0 ? b.wins / totalB : 0;
-          return winRateB - winRateA;
-        case 'profit':
-          // 使用 netProfit 作为盈亏
-          return b.netProfit - a.netProfit;
-        default:
-          return 0;
+    // 更新参与者状态为fighting
+    allArenaAgents.forEach(agent => {
+      if (agent.status !== 'fighting') {
+        updateParticipant(agent.id, { status: 'fighting' });
       }
     });
-  }, [myAgents, sortBy]);
+  }, [myAgents, systemAgents, setArenaPhase, updateParticipant]);
 
-  // 处理创建 Agent
-  const handleCreateAgent = () => {
-    if (!wallet.connected) {
-      alert(t('wallet.connectFirst'));
-      return;
-    }
-    navigate('/squad');
-  };
+  // 获取所有在竞技场的agents
+  const allAgents = useMemo(() => {
+    return [...myAgents, ...systemAgents]
+      .filter(a => a.status === 'in_arena' || a.status === 'fighting')
+      .slice(0, 20);
+  }, [myAgents, systemAgents]);
 
-  // 使用 ref 中的状态传递给子组件
-  const currentPhase = timerStateRef.current.phase;
-  const currentCountdown = timerStateRef.current.countdown;
-  const currentSelectedSlots = timerStateRef.current.selectedSlots;
+  const longAgents = useMemo(() => allAgents.filter(a => a.position === 'long'), [allAgents]);
+  const shortAgents = useMemo(() => allAgents.filter(a => a.position === 'short'), [allAgents]);
+
+  // 更新arena participants
+  useEffect(() => {
+    useGameStore.setState(state => ({
+      arena: { ...state.arena, participants: allAgents }
+    }));
+  }, [allAgents]);
 
   return (
     <div className="h-screen bg-void pt-20 pb-16 flex flex-col">
       <div className="flex-1 max-w-screen-xl mx-auto px-4 w-full flex flex-col min-h-0">
-        {/* 排行榜跑马灯 - 在竞技场标题上方 */}
+        {/* 价格头部 */}
+        <PriceHeader
+          priceData={priceData}
+          onSymbolChange={(symbol: CryptoSymbol) => setActiveSymbol(symbol)}
+        />
+
+        {/* 排行榜跑马灯 */}
         <LeaderboardMarquee />
 
-        {/* 移动端：垂直布局 | 桌面端：左右布局 */}
-        <div className="flex-1 flex flex-col lg:grid lg:grid-cols-4 gap-4 lg:gap-6 min-h-0 overflow-y-auto lg:overflow-visible pb-20 lg:pb-0">
-          {/* 竞技场 */}
-          <div className="lg:col-span-3 flex-shrink-0 lg:flex-shrink lg:h-full lg:min-h-0">
-            {/* 战斗画面 */}
-            <div className="card-luxury rounded-2xl overflow-hidden h-auto lg:h-full flex flex-col">
-              <div className="px-4 lg:px-6 h-[56px] lg:h-[72px] border-b border-white/5 flex items-center justify-between flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base lg:text-lg font-semibold text-white">BATTLE</h2>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-luxury-gold/20 text-luxury-gold border border-luxury-gold/30 font-mono">
-                    {t('arena.round')} {displayBattleRound.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 px-2 lg:px-3 py-1.5 bg-luxury-green/5 border border-luxury-green/20 rounded-full">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-luxury-green opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-luxury-green"></span>
-                  </span>
-                  <Users className="w-3.5 h-3.5 text-luxury-green" />
-                  <span className="text-xs font-semibold text-luxury-green font-mono">
-                    {systemAgents.filter(a => a.status === 'in_arena').length + myArenaAgents.length}
-                  </span>
-                </div>
-              </div>
-              <div className="aspect-[4/3] lg:flex-1 lg:aspect-auto p-2 lg:p-4 relative min-h-0">
-                <ArenaCanvas
-                  phase={currentPhase}
-                  countdown={currentCountdown}
-                  selectedSlots={currentSelectedSlots}
-                />
-
-                {/* 悬浮战斗日志 - 可切换竞技场日志和我的小队日志 */}
-                <BattleLog
-                  arenaLogs={arena.battleLogs}
-                  myLogs={myBattleLogs}
-                  isOverlay={true}
-                />
-
-                {/* 结算弹窗 - 在竞技场画布内显示 */}
-                {showSettlement && arena.top3.length > 0 && (
-                  <div className="absolute inset-0 z-50 flex items-center justify-center bg-void/90 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-void-panel/95 rounded-2xl overflow-hidden border border-white/10 max-w-[320px] w-[85%] animate-scale-in shadow-2xl">
-                      {/* 头部 - 简洁显示轮次 */}
-                      <div className="px-4 py-3 bg-gradient-to-r from-luxury-gold/10 to-luxury-amber/5 border-b border-white/5 flex items-center justify-between">
-                        <span className="text-sm font-medium text-white/60">Round {displayBattleRound.toLocaleString()}</span>
-                        <button
-                          onClick={() => setShowSettlement(false)}
-                          className="p-1 rounded text-white/30 hover:text-white/60 transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {/* TOP3 列表 - 简洁风格 */}
-                      <div className="p-4 space-y-3">
-                        {arena.top3.map((result, index) => (
-                          <div
-                            key={result.agent.id}
-                            className={`flex items-center gap-3 p-3 rounded-xl ${
-                              index === 0 ? 'bg-luxury-gold/10 border border-luxury-gold/30' :
-                              index === 1 ? 'bg-white/5 border border-white/10' :
-                              'bg-white/5 border border-white/10'
-                            }`}
-                          >
-                            {/* 排名数字 */}
-                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-sm font-bold ${
-                              index === 0 ? 'bg-luxury-gold text-void' :
-                              index === 1 ? 'bg-white/20 text-white' :
-                              'bg-white/10 text-white/70'
-                            }`}>
-                              {index + 1}
-                            </div>
-
-                            {/* Agent 头像 */}
-                            <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-void-light">
-                              {result.agent.image ? (
-                                <img
-                                  src={result.agent.image}
-                                  alt={result.agent.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div
-                                  className="w-full h-full"
-                                  style={{ backgroundColor: result.agent.color }}
-                                />
-                              )}
-                              {/* 余额标签 */}
-                              <div className="absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm py-0.5 px-1">
-                                <p className="text-[8px] font-mono text-luxury-gold text-center truncate">
-                                  ${result.agent.balance}
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* Agent 信息 */}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-white truncate">{result.agent.name}</p>
-                              <p className="text-xs text-white/40">#{result.agent.nftId || result.agent.id.slice(-4)}</p>
-                            </div>
-
-                            {/* 盈利 */}
-                            <div className="text-right">
-                              <p className="text-sm font-bold font-mono text-luxury-green">+{result.profit}</p>
-                            </div>
-                          </div>
-                        ))}
-
-                        {/* 倒计时提示 */}
-                        <p id="settlement-countdown" className="text-center text-white/20 text-xs pt-2">
-                          Next round in...
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+        {/* 主内容区 */}
+        <div className="flex-1 flex gap-4 min-h-0">
+          {/* 左侧：多头列表 */}
+          <div className="w-48 flex-shrink-0 flex flex-col">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="w-4 h-4 text-green-500" />
+              <span className="text-sm font-bold text-green-500">BULLS</span>
+              <span className="text-xs text-white/40">({longAgents.length})</span>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {longAgents.map(agent => (
+                <SideAgentItem key={agent.id} agent={agent} side="long" />
+              ))}
             </div>
           </div>
-          
-          {/* 我的小队 */}
-          <div className="lg:col-span-1 flex-shrink-0 lg:flex-shrink lg:h-full lg:min-h-0">
-            {/* 小队概览 - 移动端高度自适应，桌面端填满 */}
-            <div 
-              className="card-luxury rounded-2xl overflow-hidden flex flex-col w-full h-auto lg:h-full"
-            >
-              {/* 标题栏 + 铸造按钮 */}
-              <div className="px-4 lg:px-6 h-[56px] lg:h-[72px] border-b border-white/5 flex items-center justify-between flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-base lg:text-lg font-semibold text-white">MY SQUAD</h2>
-                </div>
-                {/* 铸造按钮移到标题右侧 */}
-                {wallet.connected && myAgents.length < 30 && (
-                  <button
-                    onClick={handleCreateAgent}
-                    className="flex items-center gap-1.5 px-2 lg:px-3 py-1.5 bg-luxury-purple/10 border border-luxury-purple/30 rounded-lg text-luxury-purple-light hover:bg-luxury-purple/20 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span className="text-xs font-medium hidden sm:inline">{t('squad.mint')}</span>
-                  </button>
-                )}
-              </div>
 
-              {/* 内容区域 - 可滚动 */}
-              <div className="flex-1 overflow-y-auto p-3 lg:p-4 custom-scrollbar max-h-[300px] lg:max-h-none">
-                {!wallet.connected ? (
-                  <div className="text-center py-8 lg:py-12">
-                    <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-2xl bg-void-light/50 border border-white/5 flex items-center justify-center mx-auto mb-4">
-                      <Wallet className="w-8 h-8 lg:w-10 lg:h-10 text-white/20" />
-                    </div>
-                    <p className="text-white/40 mb-2">{t('wallet.connectFirst')}</p>
-                    <p className="text-xs text-white/20">{t('wallet.connectDesc')}</p>
-                  </div>
-                ) : myAgents.length === 0 ? (
-                  /* 空状态 - 快捷创建入口 */
-                  <div className="text-center py-8 lg:py-12">
-                    <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-2xl bg-void-light/50 border border-white/5 flex items-center justify-center mx-auto mb-4">
-                      <Users className="w-8 h-8 lg:w-10 lg:h-10 text-white/20" />
-                    </div>
-                    <p className="text-white/40 mb-4">{t('squad.noAgents')}</p>
-                    <button
-                      onClick={handleCreateAgent}
-                      className="group relative px-6 py-3 rounded-xl overflow-hidden"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-luxury-purple via-luxury-purple-light to-luxury-cyan" />
-                      <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-                      <span className="relative flex items-center gap-2 text-white font-semibold">
-                        <Plus className="w-5 h-5" />
-                        {t('squad.mintFirst')}
-                      </span>
-                    </button>
-                    <p className="text-xs text-white/20 mt-3">{t('squad.mint')} 100 $MON</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {/* 表头 - 调整对齐 */}
-                    <div className="flex items-center gap-2 px-2 py-1.5 text-[10px] text-white/40 uppercase tracking-wider border-b border-white/5 mb-1">
-                      <div className="w-8 flex-shrink-0"></div>
-                      <div className="flex-1 min-w-0">{t('squad.name')} / {t('squad.profit')}</div>
-                      <div className="w-[60px] text-right">{t('squad.actions')}</div>
-                    </div>
-                    {/* 所有 Agents 列表 - 紧凑模式 */}
-                    <div className="grid grid-cols-1 gap-1.5">
-                      {sortedAgents.slice(0, 30).map(agent => (
-                        <AgentCard key={agent.id} agent={agent} viewMode="list" compact />
-                      ))}
-                    </div>
-                    {myAgents.length > 30 && (
-                      <p className="text-xs text-white/30 text-center py-2">
-                        {myAgents.length - 30} {t('squad.agents')} {t('common.hidden')}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
+          {/* 中间：竞技场画布 */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 bg-void-panel/50 rounded-2xl border border-white/10 overflow-hidden relative">
+              <ArenaCanvas
+                phase="fighting"
+                countdown={0}
+                selectedSlots={[]}
+                priceChange={priceData.secondChangePercent}
+              />
             </div>
           </div>
+
+          {/* 右侧：空头列表 */}
+          <div className="w-48 flex-shrink-0 flex flex-col">
+            <div className="flex items-center gap-2 mb-3 justify-end">
+              <span className="text-xs text-white/40">({shortAgents.length})</span>
+              <span className="text-sm font-bold text-red-500">BEARS</span>
+              <TrendingDown className="w-4 h-4 text-red-500" />
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {shortAgents.map(agent => (
+                <SideAgentItem key={agent.id} agent={agent} side="short" />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 底部统计 */}
+        <div className="mt-4 flex items-center justify-between text-xs text-white/40">
+          <div>Total Agents: {allAgents.length}</div>
+          <div>Long: {longAgents.length} | Short: {shortAgents.length}</div>
+          <div>Real-time Battle</div>
         </div>
       </div>
     </div>
